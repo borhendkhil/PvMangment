@@ -1,0 +1,63 @@
+/* ==========================================================
+   DIRECTEUR DASHBOARD - MÊME DESIGN QUE INFORMATIQUE ADMIN
+   ========================================================== */
+
+.directeur-dashboard {
+  --primary-gradient: linear-gradient(135deg, #69c0e2 0%, #327e9e 100%);
+}
+
+.directeur-sidebar {
+  background: linear-gradient(135deg, #1a2d3d, #1e3a4d, #22495d) !important;
+}
+
+.directeur-dashboard .logo span {
+  background: linear-gradient(135deg, #69c0e2 0%, #327e9e 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.directeur-dashboard .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.directeur-dashboard .stat-card-container {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-top: 3px solid #69c0e2;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.directeur-dashboard .stat-card-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(105, 192, 226, 0.2);
+}
+
+.directeur-dashboard .stat-card-icon {
+  color: #69c0e2;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.directeur-dashboard .stat-card-title {
+  font-size: 12px;
+  color: #b0b0c0;
+  margin-bottom: 8px;
+}
+
+.directeur-dashboard .stat-card-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #69c0e2;
+  margin: 0;
+}

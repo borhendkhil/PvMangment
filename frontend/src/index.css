@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer components {
+  .dot-overlay {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 25px 25px;
+  }
+}
+
+body {
+  @apply bg-no-repeat bg-cover bg-center min-h-screen;
+  background-image: url('/images/bg.png');
+}

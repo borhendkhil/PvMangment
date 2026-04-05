@@ -1,0 +1,380 @@
+/* ==========================================================
+   SUJET DECISION MANAGEMENT - STYLE MATCHING ADMIN DASHBOARD
+   ========================================================== */
+
+:root {
+  --primary-gradient: linear-gradient(135deg, #69c0e2 0%, #327e9e 100%);
+  --secondary-gradient: linear-gradient(135deg, #213b50 0%, #213142 100%);
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-border: rgba(255, 255, 255, 0.15);
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0c0;
+  --shadow-light: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.sujet-decision-container {
+  padding: 30px;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sujet-decision-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.sujet-decision-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  background: var(--primary-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.sujet-decision-search {
+  margin-bottom: 24px;
+}
+
+.sujet-decision-search input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.sujet-decision-search input::placeholder {
+  color: var(--text-secondary);
+}
+
+.sujet-decision-search input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #69c0e2;
+  box-shadow: 0 0 20px rgba(105, 192, 226, 0.2);
+}
+
+/* Table Styling */
+.sujet-decision-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-light);
+}
+
+.sujet-decision-table thead {
+  background: linear-gradient(135deg, rgba(105, 192, 226, 0.2), rgba(50, 126, 158, 0.1));
+  border-bottom: 2px solid rgba(105, 192, 226, 0.3);
+}
+
+.sujet-decision-table th {
+  padding: 16px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 13px;
+  color: #69c0e2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sujet-decision-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.sujet-decision-table tbody tr:hover {
+  background: rgba(105, 192, 226, 0.1);
+  transform: translateX(-2px);
+}
+
+.sujet-decision-table td {
+  padding: 14px 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.sujet-decision-table tbody tr td:first-child {
+  color: #69c0e2;
+  font-weight: 600;
+}
+
+.sujet-decision-table tbody tr td:nth-child(2) {
+  font-weight: 500;
+}
+
+.sujet-decision-table tbody tr td:nth-child(3) {
+  color: var(--text-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Action Buttons */
+.sujet-decision-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-edit, .btn-delete {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-edit {
+  background: rgba(74, 144, 226, 0.2);
+  color: #4a90e2;
+  border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.btn-edit:hover {
+  background: rgba(74, 144, 226, 0.3);
+  border-color: #4a90e2;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.btn-delete:hover {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: #e74c3c;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Modal Styling */
+.sujet-decision-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.sujet-decision-modal-content {
+  background: linear-gradient(135deg, rgba(26, 45, 61, 0.95) 0%, rgba(30, 58, 77, 0.95) 100%);
+  border: 1px solid rgba(105, 192, 226, 0.3);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.sujet-decision-modal-content h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #69c0e2;
+  margin-bottom: 20px;
+  background: var(--primary-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Form Styling */
+.sujet-decision-form-group {
+  margin-bottom: 18px;
+}
+
+.sujet-decision-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sujet-decision-form-group input,
+.sujet-decision-form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(105, 192, 226, 0.4);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.sujet-decision-form-group input:focus,
+.sujet-decision-form-group textarea:focus {
+  outline: none;
+  background-color: rgba(105, 192, 226, 0.15);
+  border-color: rgba(105, 192, 226, 0.9);
+  box-shadow: 0 0 0 3px rgba(105, 192, 226, 0.2);
+}
+
+.sujet-decision-form-group input::placeholder,
+.sujet-decision-form-group textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.sujet-decision-form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.sujet-decision-error {
+  color: #fca5a5;
+  font-size: 12px;
+  margin-top: 6px;
+  display: block;
+}
+
+.sujet-decision-form-error input,
+.sujet-decision-form-error textarea {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Form Buttons */
+.sujet-decision-form-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-cancel, .btn-submit {
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-cancel:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(105, 192, 226, 0.3);
+}
+
+.btn-submit {
+  background: rgba(105, 192, 226, 0.1);
+  color: white;
+  border: 1px solid rgba(105, 192, 226, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: rgba(105, 192, 226, 0.22);
+  border-color: rgba(105, 192, 226, 0.8);
+  box-shadow: 0 8px 24px rgba(105, 192, 226, 0.12);
+  transform: translateY(-2px);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.sujet-decision-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.sujet-decision-empty p {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Loading State */
+.sujet-decision-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.sujet-decision-loading p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Add Button Primary */
+.btn-add-sujet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+}
+
+.btn-add-sujet:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(105, 192, 226, 0.3);
+}
+
+.btn-add-sujet:active {
+  transform: translateY(0);
+}

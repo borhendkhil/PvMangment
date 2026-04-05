@@ -1,0 +1,48 @@
+{
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+  // Recommend Tailwind IntelliSense for completions and diagnostics
+  "editor.defaultExtensions": [
+    "austenc.tailwindcss-intellisense"
+  ],
+
+  // Code Spell Checker (cSpell) settings — prefer French + English and workspace words
+  "cSpell.language": "fr,fr-FR,en",
+  "cSpell.enabled": false,
+  "cSpell.ignorePaths": [
+    "**/target/**",
+    "**/node_modules/**",
+    "frontend/public/**",
+    "**/*.png",
+    "**/*.svg",
+    "**/*.jar"
+  ],
+  "cSpell.words": [
+    "adress",
+    "automatiquement",
+    "comite",
+    "comité",
+    "décision",
+    "decission",
+    "direc",
+    "direction",
+    "données",
+    "généraux",
+    "Génère",
+    "grâce",
+    "membre",
+    "membres",
+    "Paramètres",
+    "prenom",
+    "Prenom",
+    "procès-verbaux",
+    "projectlombok",
+    "PVManager",
+    "rôles",
+    "springframework",
+    "sujet",
+    "utilisateurs",
+    "الإلكتروني"
+]
+}
