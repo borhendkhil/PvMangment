@@ -1,633 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, ChevronDown, Download, Eye, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Edit2, Eye, FileText, Filter, LayoutGrid, Plus, Printer, Search, Table2, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import API_CONFIG from '../../config/api';
 import { formatDateDDMMYYYY } from '../../utils/dateFormatter';
 import { showToast } from '../common/Toaster';
-
-const API_BASE = 'http://localhost:9091/api';
+import DecisionForm from './DecisionForm';
+import DecisionViewer, { openDecisionPrintWindow, statusColors } from './DecisionViewer';
 
 const DecisionManagement = () => {
-  const [sujets, setSujets] = useState([]);
-  const [expandedSujets, setExpandedSujets] = useState({});
-  const [decisions, setDecisions] = useState({});
-  const [pdfs, setPdfs] = useState({});
   const [loading, setLoading] = useState(false);
-  const [showPdfModal, setShowPdfModal] = useState(false);
-  const [selectedDecision, setSelectedDecision] = useState(null);
-  const [currentPdfs, setCurrentPdfs] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedSujetId, setSelectedSujetId] = useState(null);
-  const [formData, setFormData] = useState({ statut: 'brouillon' });
-  const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [decisions, setDecisions] = useState([]);
+  const [viewMode, setViewMode] = useState('table');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
+  const [activeDecision, setActiveDecision] = useState(null);
 
   useEffect(() => {
-    fetchSujets();
+    loadData();
   }, []);
 
-  const fetchSujets = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/directeur/process/sujets`);
-      setSujets(res.data || []);
-    } catch (err) {
-      console.error('Error fetching sujets', err);
-      showToast('خطأ في جلب الموضوعات', 'error');
-    }
-    setLoading(false);
-  };
-
-  const toggleSujet = async (sujetId) => {
-    setExpandedSujets(prev => {
-      const newState = { ...prev, [sujetId]: !prev[sujetId] };
-      if (newState[sujetId] && !decisions[sujetId]) {
-        fetchDecisionsForSujet(sujetId);
-      }
-      return newState;
-    });
-  };
-
-  const fetchDecisionsForSujet = async (sujetId) => {
-    try {
-      const res = await axios.get(`${API_BASE}/directeur/process/decisions?sujetId=${sujetId}`);
-      setDecisions(prev => ({ ...prev, [sujetId]: res.data || [] }));
-    } catch (err) {
-      console.error('Error fetching decisions:', err);
-      showToast('خطأ في جلب المقررات', 'error');
-    }
-  };
-
-  const handleViewPdfs = async (decision) => {
-    setSelectedDecision(decision);
-    try {
-      const res = await axios.get(`${API_BASE}/directeur/process/pdfs/${decision.id}`);
-      setCurrentPdfs(res.data || []);
-    } catch (err) {
-      console.error('Error fetching PDFs:', err);
-      setCurrentPdfs([]);
-    }
-    setShowPdfModal(true);
-  };
-
-  const handleAddDecision = (sujetId) => {
-    setSelectedSujetId(sujetId);
-    setFormData({ statut: 'brouillon' });
-    setError(null);
-    setShowAddModal(true);
-  };
-
-  const handleSubmitDecision = async (e) => {
-    e.preventDefault();
-
-    setSubmitting(true);
-    try {
-      await axios.post(`${API_BASE}/directeur/process/decisions`, {
-        sujetId: selectedSujetId,
-        statut: formData.statut || 'brouillon'
-      });
-      
-      showToast('تم إضافة المقرر بنجاح', 'success');
-      setShowAddModal(false);
-      fetchDecisionsForSujet(selectedSujetId);
-    } catch (err) {
-      const msg = err.response?.data?.message || 'خطأ في إضافة المقرر';
-      setError(msg);
-      showToast(msg, 'error');
+      const res = await axios.get(API_CONFIG.DIRECTEUR.PROCESS.DECISIONS_FULL);
+      setDecisions(res.data || []);
+    } catch (error) {
+      console.error(error);
+      showToast('تعذر تحميل المقررات', 'error');
+      setDecisions([]);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleDeleteDecision = async (decisionId, sujetId) => {
-    if (window.confirm('هل تريد حذف هذا المقرر؟')) {
-      try {
-        await axios.delete(`${API_BASE}/directeur/process/decisions/${decisionId}`);
-        showToast('تم حذف المقرر بنجاح', 'success');
-        fetchDecisionsForSujet(sujetId);
-      } catch (err) {
-        showToast('خطأ في حذف المقرر', 'error');
-      }
-    }
+  const filteredDecisions = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    return decisions.filter((decision) => {
+      const subjectName = decision.subject?.sujet || decision.sujetNom || decision.subject?.description || '';
+      const haystack = `${decision.fichierName || ''} ${subjectName}`.toLowerCase();
+      const matchesSearch = !needle || haystack.includes(needle);
+      const matchesStatus = !statusFilter || (decision.statut || '').toLowerCase() === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [decisions, searchTerm, statusFilter]);
+
+  const stats = useMemo(() => {
+    return {
+      total: decisions.length,
+      active: decisions.filter((decision) => (decision.statut || '').toLowerCase() === 'active').length,
+      inactive: decisions.filter((decision) => (decision.statut || '').toLowerCase() !== 'active').length,
+    };
+  }, [decisions]);
+
+  const refresh = () => {
+    setShowForm(false);
+    setActiveDecision(null);
+    loadData();
   };
 
-  const handleUploadPdf = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const openCreate = () => {
+    setActiveDecision(null);
+    setShowForm(true);
+  };
 
-    if (file.type !== 'application/pdf') {
-      showToast('يجب أن يكون الملف PDF', 'error');
-      return;
-    }
+  const openEdit = (decision) => {
+    setActiveDecision(decision);
+    setShowForm(true);
+  };
 
+  const openView = (decision) => {
+    setActiveDecision(decision);
+    setShowViewer(true);
+  };
+
+  const deleteDecision = async (decision) => {
+    if (!window.confirm(`هل تريد حذف القرار ${decision.fichierName || decision.id || ''}؟`)) return;
     try {
-      const formDataPdf = new FormData();
-      formDataPdf.append('file', file);
-      formDataPdf.append('decisionId', selectedDecision.id);
-
-      await axios.post(`${API_BASE}/directeur/process/upload-pdf`, formDataPdf, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      showToast('تم رفع الملف بنجاح', 'success');
-      const res = await axios.get(`${API_BASE}/directeur/process/pdfs/${selectedDecision.id}`);
-      setCurrentPdfs(res.data || []);
-    } catch (err) {
-      console.error('Error uploading PDF:', err);
-      showToast('خطأ في رفع الملف', 'error');
+      await axios.delete(API_CONFIG.DIRECTEUR.DELETE_DECISION(decision.id));
+      showToast('تم حذف القرار بنجاح', 'success');
+      loadData();
+    } catch (error) {
+      showToast('تعذر حذف القرار', 'error');
     }
   };
 
-  const handleDeletePdf = async (pdfId) => {
-    if (window.confirm('هل تريد حذف هذا الملف؟')) {
-      try {
-        await axios.delete(`${API_BASE}/directeur/process/pdfs/${pdfId}`);
-        showToast('تم حذف الملف بنجاح', 'success');
-        setCurrentPdfs(currentPdfs.filter(p => p.id !== pdfId));
-      } catch (err) {
-        showToast('خطأ في حذف الملف', 'error');
-      }
-    }
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
   };
-
-  const downloadPdf = (pdfUrl, fileName) => {
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = fileName;
-    link.click();
-  };
-
-  const filteredSujets = sujets.filter(sujet =>
-    sujet.sujet.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px 20px', color: '#ffffff' }}>جاري التحميل...</div>;
+    return <div dir="rtl" style={{ color: '#fff', textAlign: 'center', padding: '48px 20px', fontFamily: 'Tajawal, sans-serif' }}>جارٍ تحميل المقررات...</div>;
   }
 
   return (
-    <div className="decision-management-section" dir="rtl">
-      <div className="section-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>إدارة المقررات</h2>
-        <button 
-          onClick={() => { setSelectedSujetId(null); setFormData({ statut: 'brouillon' }); setError(null); setShowAddModal(true); }}
-          style={{
-            background: 'linear-gradient(135deg, #69c0e2, #4a9bc7)',
-            color: '#ffffff',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => e.target.style.boxShadow = '0 0 15px rgba(105, 192, 226, 0.4)'}
-          onMouseLeave={(e) => e.target.style.boxShadow = 'none'}
-        >
-          <Plus size={16} /> إضافة مقرر
-        </button>
-      </div>
-
-      {/* Search Bar */}
-      <div style={{ marginBottom: '20px', position: 'relative' }}>
-        <Search size={18} style={{ position: 'absolute', right: '12px', top: '12px', color: '#69c0e2' }} />
-        <input
-          type="text"
-          placeholder="بحث عن موضوع..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 12px 12px 45px',
-            background: 'rgba(102, 126, 234, 0.1)',
-            border: '1px solid rgba(105, 192, 226, 0.3)',
-            borderRadius: '8px',
-            color: '#e2e8f0',
-            fontSize: '14px',
-            fontFamily: 'inherit'
-          }}
-        />
-      </div>
-
-      {filteredSujets.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#ffffff' }}>
-          <p>لا توجد مواضيع</p>
+    <div dir="rtl" style={{ fontFamily: 'Tajawal, sans-serif', color: '#fff' }}>
+      <div style={topCard}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div>
+            <div style={{ color: '#b0b0c0', fontSize: '12px' }}>إدارة المقررات</div>
+            <h2 style={{ margin: '4px 0 0', fontSize: '28px' }}>المقررات</h2>
+          </div>
+          <button onClick={openCreate} style={primaryButton}><Plus size={16} /> قرار جديد</button>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {filteredSujets.map(sujet => (
-            <div key={sujet.id} style={{
-              background: 'rgba(102, 126, 234, 0.1)',
-              border: '1px solid rgba(105, 192, 226, 0.3)',
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}>
-              {/* Subject Header */}
-              <div 
-                onClick={() => toggleSujet(sujet.id)}
-                style={{
-                  background: 'rgba(105, 192, 226, 0.2)',
-                  padding: '16px 20px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <ChevronDown 
-                    size={20}
-                    style={{
-                      transform: expandedSujets[sujet.id] ? 'rotate(-90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.3s ease'
-                    }}
-                  />
-                  <div>
-                    <h3 style={{ margin: '0', color: '#69c0e2', fontSize: '16px', fontWeight: '700' }}>
-                      {sujet.sujet}
-                    </h3>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#ffffff' }}>
-                      {sujet.description}
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleAddDecision(sujet.id); }}
-                  style={{
-                    background: 'rgba(105, 192, 226, 0.2)',
-                    color: '#69c0e2',
-                    border: '1px solid rgba(105, 192, 226, 0.4)',
-                    padding: '8px 14px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(105, 192, 226, 0.3)';
-                    e.target.style.borderColor = 'rgba(105, 192, 226, 0.6)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'rgba(105, 192, 226, 0.2)';
-                    e.target.style.borderColor = 'rgba(105, 192, 226, 0.4)';
-                  }}
-                >
-                  <Plus size={14} /> إضافة
-                </button>
-              </div>
 
-              {/* Decisions Table */}
-              {expandedSujets[sujet.id] && (
-                <div style={{ padding: '20px' }}>
-                  {!decisions[sujet.id] || decisions[sujet.id].length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#ffffff', padding: '20px' }}>لا توجد مقررات</p>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        background: 'rgba(102, 126, 234, 0.05)',
-                        border: '1px solid rgba(105, 192, 226, 0.2)',
-                        borderRadius: '6px'
-                      }}>
-                        <thead>
-                          <tr style={{ background: 'rgba(105, 192, 226, 0.15)' }}>
-                            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#69c0e2', borderBottom: '1px solid rgba(105, 192, 226, 0.2)', fontSize: '12px', fontWeight: '600' }}>#</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#69c0e2', borderBottom: '1px solid rgba(105, 192, 226, 0.2)', fontSize: '12px', fontWeight: '600' }}>الحالة</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'right', color: '#69c0e2', borderBottom: '1px solid rgba(105, 192, 226, 0.2)', fontSize: '12px', fontWeight: '600' }}>التاريخ</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', color: '#69c0e2', borderBottom: '1px solid rgba(105, 192, 226, 0.2)', fontSize: '12px', fontWeight: '600' }}>الملفات</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center', color: '#69c0e2', borderBottom: '1px solid rgba(105, 192, 226, 0.2)', fontSize: '12px', fontWeight: '600' }}>الإجراءات</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {decisions[sujet.id].map((decision, index) => (
-                            <tr key={decision.id} style={{ borderBottom: '1px solid rgba(105, 192, 226, 0.1)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(105, 192, 226, 0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                              <td style={{ padding: '12px 16px', color: '#ffffff', fontSize: '13px', textAlign: 'right' }}>{index + 1}</td>
-                              <td style={{ padding: '12px 16px', color: '#69c0e2', fontSize: '13px', textAlign: 'right', fontWeight: '600' }}>{decision.statut || '-'}</td>
-                              <td style={{ padding: '12px 16px', color: '#ffffff', fontSize: '13px', textAlign: 'right' }}>{formatDateDDMMYYYY(decision.dateCreation)}</td>
-                              <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                <button
-                                  onClick={() => handleViewPdfs(decision)}
-                                  style={{
-                                    background: 'rgba(105, 192, 226, 0.2)',
-                                    color: '#69c0e2',
-                                    border: '1px solid rgba(105, 192, 226, 0.4)',
-                                    padding: '6px 12px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '11px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    fontWeight: '600',
-                                    transition: 'all 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.background = 'rgba(105, 192, 226, 0.3)';
-                                    e.target.style.borderColor = 'rgba(105, 192, 226, 0.6)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.background = 'rgba(105, 192, 226, 0.2)';
-                                    e.target.style.borderColor = 'rgba(105, 192, 226, 0.4)';
-                                  }}
-                                >
-                                  <Eye size={13} /> عرض الملفات
-                                </button>
-                              </td>
-                              <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                  <button
-                                    style={{
-                                      background: 'transparent',
-                                      color: '#ff6b6b',
-                                      border: '1px solid rgba(255, 107, 107, 0.4)',
-                                      padding: '6px 10px',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontSize: '11px',
-                                      transition: 'all 0.2s'
-                                    }}
-                                    onClick={() => handleDeleteDecision(decision.id, sujet.id)}
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+        <div className="decision-stats-grid" style={statsGrid}>
+          <StatCard title="الإجمالي" value={stats.total} icon={<FileText size={22} />} />
+          <StatCard title="النشطة" value={stats.active} icon={<FileText size={22} />} />
+          <StatCard title="غير النشطة" value={stats.inactive} icon={<FileText size={22} />} />
+        </div>
+      </div>
+
+      <div style={filtersCard}>
+        <div className="decision-filters-grid" style={filtersGrid}>
+          <InputField icon={<Search size={16} />} placeholder="البحث بالموضوع أو الملف" value={searchTerm} onChange={setSearchTerm} />
+          <SelectField
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: '', label: 'كل الحالات' },
+              { value: 'active', label: statusColors.active.label },
+              { value: 'inactive', label: statusColors.inactive.label },
+            ]}
+          />
+          <button onClick={clearFilters} style={ghostButton}><Filter size={16} /> مسح</button>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#b0b0c0' }}>النتائج: {filteredDecisions.length}</div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Toggle active={viewMode === 'grid'} onClick={() => setViewMode('grid')} icon={<LayoutGrid size={16} />} label="بطاقات" />
+            <Toggle active={viewMode === 'table'} onClick={() => setViewMode('table')} icon={<Table2 size={16} />} label="جدول" />
+          </div>
+        </div>
+      </div>
+
+      {filteredDecisions.length === 0 ? (
+        <div style={emptyState}>لا توجد مقررات.</div>
+      ) : viewMode === 'grid' ? (
+        <div style={gridStyle}>
+          {filteredDecisions.map((decision) => (
+            <DecisionCard
+              key={decision.id}
+              decision={decision}
+              onView={() => openView(decision)}
+              onEdit={() => openEdit(decision)}
+              onPrint={() => openDecisionPrintWindow(decision)}
+              onDelete={() => deleteDecision(decision)}
+            />
           ))}
         </div>
-      )}
-
-      {/* Add Decision Modal */}
-      {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 99999
-        }} onClick={() => setShowAddModal(false)}>
-          <div style={{
-            background: 'rgba(20, 35, 60, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(105, 192, 226, 0.3)',
-            borderRadius: '12px',
-            padding: '30px',
-            maxWidth: '500px',
-            width: '90%'
-          }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#69c0e2', fontSize: '18px', fontWeight: '700' }}>إضافة مقرر جديد</h3>
-            
-            {error && <div style={{ background: 'rgba(220, 38, 38, 0.2)', color: '#fca5a5', padding: '12px', borderRadius: '4px', marginBottom: '15px', fontSize: '13px' }}>{error}</div>}
-            
-            <form onSubmit={handleSubmitDecision}>
-              {!selectedSujetId && (
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#ffffff', fontSize: '13px', fontWeight: '600' }}>الموضوع *</label>
-                  <select
-                    value={selectedSujetId || ''}
-                    onChange={(e) => setSelectedSujetId(parseInt(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(105, 192, 226, 0.3)',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      fontFamily: 'inherit',
-                      cursor: 'pointer',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2369c0e2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 8px center',
-                      backgroundSize: '20px',
-                      paddingRight: '35px'
-                    }}
-                  >
-                    <option value="" style={{ color: '#ffffff', background: 'rgba(20, 35, 60, 0.95)' }}>اختر موضوع...</option>
-                    {sujets.map(sujet => (
-                      <option key={sujet.id} value={sujet.id} style={{ color: '#ffffff', background: 'rgba(20, 35, 60, 0.95)' }}>
-                        {sujet.sujet}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', color: '#ffffff', fontSize: '13px', fontWeight: '600' }}>الحالة</label>
-                <select
-                  value={formData.statut}
-                  onChange={(e) => setFormData({...formData, statut: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(105, 192, 226, 0.3)',
-                    borderRadius: '6px',
-                    color: '#ffffff',
-                    fontSize: '13px',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="brouillon">مسودة</option>
-                  <option value="approuvée">موافق عليها</option>
-                  <option value="rejetée">مرفوضة</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'rgba(105, 192, 226, 0.2)',
-                    color: '#69c0e2',
-                    border: '1px solid rgba(105, 192, 226, 0.4)',
-                    padding: '10px 20px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600'
-                  }}
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedSujetId}
-                  style={{
-                    background: 'rgba(105, 192, 226, 0.3)',
-                    color: '#69c0e2',
-                    border: '1px solid rgba(105, 192, 226, 0.5)',
-                    padding: '10px 20px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    opacity: (submitting || !selectedSujetId) ? 0.6 : 1
-                  }}
-                >
-                  {submitting ? 'جاري الحفظ...' : 'حفظ'}
-                </button>
-              </div>
-            </form>
-          </div>
+      ) : (
+        <div style={tableWrap}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '840px' }}>
+            <thead>
+              <tr style={{ background: 'rgba(105,192,226,0.12)' }}>
+                <Th>المعرف</Th>
+                <Th>الموضوع</Th>
+                <Th>الملف</Th>
+                <Th>الحالة</Th>
+                <Th>تاريخ الإنشاء</Th>
+                <Th>الإجراءات</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDecisions.map((decision) => {
+                const status = statusColors[(decision.statut || '').toLowerCase()] || statusColors.inactive;
+                return (
+                  <tr key={decision.id} style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <Td>{decision.id}</Td>
+                    <Td>{decision.subject?.sujet || decision.sujetNom || '-'}</Td>
+                    <Td>{decision.fichierName || '-'}</Td>
+                    <Td><StatusBadge status={status} /></Td>
+                    <Td>{formatDateDDMMYYYY(decision.dateCreation || decision.dateUpload)}</Td>
+                    <Td>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <ActionButton icon={<Eye size={14} />} label="عرض" onClick={() => openView(decision)} />
+                        <ActionButton icon={<Edit2 size={14} />} label="تعديل" onClick={() => openEdit(decision)} />
+                        <ActionButton icon={<Printer size={14} />} label="طباعة" onClick={() => openDecisionPrintWindow(decision)} />
+                        <ActionButton icon={<Trash2 size={14} />} label="حذف" onClick={() => deleteDecision(decision)} danger />
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* PDF Modal */}
-      {showPdfModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 99999
-        }} onClick={() => setShowPdfModal(false)}>
-          <div style={{
-            background: 'rgba(20, 35, 60, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(105, 192, 226, 0.3)',
-            borderRadius: '12px',
-            padding: '30px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto'
-          }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#69c0e2', fontSize: '18px', fontWeight: '700' }}>
-              ملفات المقرر #{selectedDecision?.id}
-            </h3>
+      <DecisionForm isOpen={showForm} decision={activeDecision} onClose={() => setShowForm(false)} onSaved={refresh} />
+      <DecisionViewer
+        isOpen={showViewer}
+        decision={activeDecision}
+        onClose={() => {
+          setShowViewer(false);
+          setActiveDecision(null);
+        }}
+        onEdit={() => {
+          setShowViewer(false);
+          setShowForm(true);
+        }}
+      />
 
-            {currentPdfs.length > 0 ? (
-              <div style={{ marginBottom: '20px', maxHeight: '300px', overflowY: 'auto' }}>
-                {currentPdfs.map(pdf => (
-                  <div key={pdf.id} style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '12px',
-                    background: 'rgba(105, 192, 226, 0.1)',
-                    border: '1px solid rgba(105, 192, 226, 0.2)',
-                    borderRadius: '6px',
-                    marginBottom: '10px'
-                  }}>
-                    <div>
-                      <p style={{ margin: '0 0 4px 0', fontWeight: '500', color: '#ffffff' }}>{pdf.fileName}</p>
-                      <small style={{ color: '#ffffff' }}>{formatDateDDMMYYYY(pdf.dateCreation)}</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => downloadPdf(pdf.filePath, pdf.fileName)}
-                        style={{
-                          background: 'rgba(105, 192, 226, 0.2)',
-                          color: '#69c0e2',
-                          border: '1px solid rgba(105, 192, 226, 0.4)',
-                          padding: '6px 10px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Download size={12} /> تحميل
-                      </button>
-                      <button
-                        onClick={() => handleDeletePdf(pdf.id)}
-                        style={{
-                          background: 'rgba(255, 107, 107, 0.2)',
-                          color: '#ff6b6b',
-                          border: '1px solid rgba(255, 107, 107, 0.4)',
-                          padding: '6px 10px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Trash2 size={12} /> حذف
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ textAlign: 'center', color: '#ffffff', padding: '20px' }}>لا توجد ملفات</p>
-            )}
-
-            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(105, 192, 226, 0.2)' }}>
-              <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#ffffff', fontSize: '13px' }}>رفع ملف PDF جديد:</label>
-              <input 
-                type="file" 
-                accept=".pdf"
-                onChange={handleUploadPdf}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(105, 192, 226, 0.3)',
-                  borderRadius: '6px',
-                  color: '#ffffff',
-                  cursor: 'pointer'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button
-                onClick={() => setShowPdfModal(false)}
-                style={{
-                  background: 'rgba(105, 192, 226, 0.2)',
-                  color: '#69c0e2',
-                  border: '1px solid rgba(105, 192, 226, 0.4)',
-                  padding: '10px 20px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <style>{`
+        @media (max-width: 900px) {
+          .decision-stats-grid,
+          .decision-filters-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+function StatCard({ title, value, icon }) {
+  return (
+    <div style={statCard}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+        <div>
+          <div style={{ color: '#b0b0c0', fontSize: '12px' }}>{title}</div>
+          <div style={{ marginTop: '8px', fontSize: '28px', fontWeight: 800 }}>{value}</div>
+        </div>
+        <div style={statIcon}>{icon}</div>
+      </div>
+    </div>
+  );
+}
+
+function DecisionCard({ decision, onView, onEdit, onPrint, onDelete }) {
+  const status = statusColors[(decision.statut || '').toLowerCase()] || statusColors.inactive;
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
+        <div>
+          <div style={numeroBadge}>#{decision.id}</div>
+          <h3 style={{ margin: '0 0 8px', fontSize: '20px', lineHeight: 1.6 }}>{decision.fichierName || '-'}</h3>
+          <div style={{ color: '#b0b0c0', fontSize: '13px' }}>{decision.subject?.sujet || decision.sujetNom || '-'}</div>
+        </div>
+        <StatusBadge status={status} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginTop: '16px' }}>
+        <MiniStat label="تاريخ الإنشاء" value={formatDateDDMMYYYY(decision.dateCreation || decision.dateUpload)} />
+        <MiniStat label="File" value={decision.fichierName || '-'} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
+        <ActionButton icon={<Eye size={14} />} label="عرض" onClick={onView} />
+        <ActionButton icon={<Edit2 size={14} />} label="تعديل" onClick={onEdit} />
+        <ActionButton icon={<Printer size={14} />} label="طباعة" onClick={onPrint} />
+        <ActionButton icon={<Trash2 size={14} />} label="حذف" onClick={onDelete} danger />
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div style={miniStatStyle}>
+      <div style={{ color: '#b0b0c0', fontSize: '12px' }}>{label}</div>
+      <div style={{ marginTop: '6px', fontWeight: 800, wordBreak: 'break-word' }}>{value}</div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  return (
+    <span style={{ padding: '8px 12px', borderRadius: '999px', background: status.bg, color: status.color, border: `1px solid ${status.color}44`, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {status.label}
+    </span>
+  );
+}
+
+function ActionButton({ icon, label, onClick, danger = false }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: danger ? 'rgba(239,68,68,0.14)' : 'rgba(105,192,226,0.16)',
+        color: danger ? '#fca5a5' : '#dff7ff',
+        border: `1px solid ${danger ? 'rgba(239,68,68,0.24)' : 'rgba(105,192,226,0.28)'}`,
+        borderRadius: '12px',
+        padding: '8px 12px',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontFamily: 'Tajawal, sans-serif',
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function Toggle({ active, onClick, icon, label }) {
+  return (
+    <button onClick={onClick} style={{ ...toggleStyle, background: active ? 'linear-gradient(135deg, #69c0e2 0%, #327e9e 100%)' : 'rgba(255,255,255,0.06)' }}>
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function InputField({ icon, placeholder, value, onChange, type = 'text' }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      {icon && <div style={inputIcon}>{icon}</div>}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ ...inputStyle, padding: icon ? '0 42px 0 14px' : '0 14px' }}
+      />
+    </div>
+  );
+}
+
+function SelectField({ value, onChange, options }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      {options.map((option) => (
+        <option key={`${option.value}-${option.label}`} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  );
+}
+
+function Th({ children }) { return <th style={{ padding: '14px 16px', textAlign: 'right', color: '#69c0e2', fontSize: '13px' }}>{children}</th>; }
+function Td({ children }) { return <td style={{ padding: '14px 16px', textAlign: 'right', verticalAlign: 'top' }}>{children}</td>; }
+
+const topCard = { background: 'linear-gradient(135deg, rgba(105,192,226,0.18) 0%, rgba(50,126,158,0.14) 100%)', border: '1px solid rgba(105,192,226,0.22)', borderRadius: '22px', padding: '18px', marginBottom: '18px', backdropFilter: 'blur(20px)' };
+const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px', marginTop: '18px' };
+const filtersCard = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '20px', padding: '16px', marginBottom: '18px', backdropFilter: 'blur(20px)' };
+const filtersGrid = { display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '12px' };
+const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' };
+const tableWrap = { overflowX: 'auto', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '20px', backdropFilter: 'blur(20px)' };
+const emptyState = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '20px', padding: '42px 20px', textAlign: 'center', color: '#b0b0c0' };
+const cardStyle = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '20px', padding: '16px', backdropFilter: 'blur(20px)', boxShadow: '0 18px 48px rgba(0,0,0,0.2)' };
+const statCard = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '18px', padding: '14px', minHeight: '92px' };
+const statIcon = { width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(105,192,226,0.18)', border: '1px solid rgba(105,192,226,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#69c0e2' };
+const miniStatStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '10px' };
+const inputStyle = { width: '100%', height: '48px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '14px', padding: '0 14px', color: '#fff', outline: 'none', fontFamily: 'Tajawal, sans-serif' };
+const inputIcon = { position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#69c0e2' };
+const toggleStyle = { color: '#fff', border: '1px solid rgba(105,192,226,0.18)', borderRadius: '14px', padding: '10px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: 'Tajawal, sans-serif' };
+const primaryButton = { background: 'linear-gradient(135deg, #69c0e2 0%, #327e9e 100%)', color: '#fff', border: 'none', padding: '12px 18px', borderRadius: '14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontFamily: 'Tajawal, sans-serif' };
+const ghostButton = { border: '1px solid rgba(105,192,226,0.18)', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '14px', padding: '0 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', height: '48px', justifyContent: 'center', fontFamily: 'Tajawal, sans-serif' };
+const numeroBadge = { display: 'inline-flex', padding: '6px 10px', borderRadius: '999px', background: 'rgba(105,192,226,0.18)', border: '1px solid rgba(105,192,226,0.28)', color: '#dff7ff', marginBottom: '10px', fontWeight: 800 };
 
 export default DecisionManagement;

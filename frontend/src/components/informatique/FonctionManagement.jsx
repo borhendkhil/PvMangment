@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
 import ModalPortal from '../common/ModalPortal';
-
-const API_BASE = 'http://localhost:9091/api';
 
 const FonctionManagement = () => {
   const [fonctions, setFonctions] = useState([]);
@@ -25,7 +24,7 @@ const FonctionManagement = () => {
   const fetchFonctions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/admin/fonctions`);
+      const res = await axios.get(API_CONFIG.ADMIN.FONCTIONS);
       setFonctions(res.data || []);
     } catch (err) {
       console.error('Fonctions fetch error:', err);
@@ -76,10 +75,10 @@ const FonctionManagement = () => {
       };
 
       if (editingFonction) {
-        await axios.put(`${API_BASE}/admin/fonctions/${editingFonction.id}`, payload, { headers });
+        await axios.patch(`${API_CONFIG.ADMIN.FONCTIONS}/${editingFonction.id}`, { name: payload.name, label_ar: payload.labelAr }, { headers });
         showToast('تم تحديث الوظيفة', 'success');
       } else {
-        await axios.post(`${API_BASE}/admin/fonctions`, payload, { headers });
+        await axios.post(API_CONFIG.ADMIN.FONCTIONS, { name: payload.name, label_ar: payload.labelAr }, { headers });
         showToast('تم إضافة الوظيفة', 'success');
       }
       
@@ -96,7 +95,7 @@ const FonctionManagement = () => {
     if (!window.confirm('هل تريد حذف هذه الوظيفة؟')) return;
     
     try {
-      await axios.delete(`${API_BASE}/admin/fonctions/${id}`);
+      await axios.delete(`${API_CONFIG.ADMIN.FONCTIONS}/${id}`);
       showToast('تم حذف الوظيفة', 'success');
       fetchFonctions();
     } catch (err) {

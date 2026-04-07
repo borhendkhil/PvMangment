@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, LayoutDashboard, LogOut, ShieldCheck, Settings, Briefcase, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import usePermissions from '../../hooks/usePermissions';
-import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
 import Toaster, { showToast } from '../common/Toaster';
 
@@ -15,7 +13,7 @@ const UserAdd = React.lazy(() => import('./UserAdd'));
 const RolesManagement = React.lazy(() => import('./RolesManagement'));
 const DirectionsList = React.lazy(() => import('./DirectionsList'));
 const DirectionAdd = React.lazy(() => import('./DirectionAdd'));
-const EmployeManagement = React.lazy(() => import('./EmployeManagement'));
+const EmployeManagement = React.lazy(() => import('./EmployeeManagement'));
 const SecurityLogs = React.lazy(() => import('./SecurityLogs'));
 const LoginHistory = React.lazy(() => import('./LoginHistory'));
 const AccessManagement = React.lazy(() => import('./AccessManagement'));
@@ -37,17 +35,8 @@ const Dashboard = () => {
   } = usePermissions();
 
   useEffect(() => {
-    fetchStats();
+    setStats(null);
   }, []);
-
-  const fetchStats = async () => {
-    try {
-      const res = await axios.get(API_CONFIG.ADMIN.STATS);
-      setStats(res.data);
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-    }
-  };
 
   const toggleGroup = (groupKey) => {
     setOpenGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));

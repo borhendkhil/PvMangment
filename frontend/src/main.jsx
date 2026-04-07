@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
+import './lib/httpClient'
 import Login from './components/Login'
 import AdminDashboard from './components/informatique/AdminDashboard'
 import AcceuilDashboard from './components/directeur/AcceuilDashboard'
@@ -10,7 +11,7 @@ import UserDashboard from './components/user/Dashboard'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />

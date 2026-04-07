@@ -111,14 +111,14 @@ const EmployeesList = () => {
         telephone: formData.telephone || null,
         address: formData.address || null,
         matricule: formData.matricule || null,
-        direction: formData.directionId ? { id: parseInt(formData.directionId) } : null,
+        directionId: formData.directionId ? parseInt(formData.directionId) : null,
       };
 
       if (editingId) {
-        await axios.put(`${API_BASE}/admin/employes/${editingId}`, payload);
+        await axios.patch(`${API_CONFIG.ADMIN.EMPLOYES}/${editingId}`, payload);
         showToast('تم تحديث الموظف بنجاح', 'success');
       } else {
-        await axios.post(`${API_BASE}/admin/employes`, payload);
+        await axios.post(API_CONFIG.ADMIN.EMPLOYES, payload);
         showToast('تم إضافة الموظف بنجاح', 'success');
       }
 
@@ -135,7 +135,7 @@ const EmployeesList = () => {
     if (!window.confirm('هل تريد حذف هذا الموظف؟')) return;
 
     try {
-      await axios.delete(`${API_BASE}/admin/employes/${id}`);
+      await axios.delete(`${API_CONFIG.ADMIN.EMPLOYES}/${id}`);
       showToast('تم حذف الموظف بنجاح', 'success');
       fetchEmployees();
     } catch (err) {

@@ -25,25 +25,27 @@ const Login = () => {
                 password
             });
 
-            const { token, roleId, nomPrenom } = response.data;
+            const { accessToken, user } = response.data || {};
+            const roles = Array.isArray(user?.roles) ? user.roles : [];
+            const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+            const primaryRole = roles[0] || '';
 
-            // Store user data
-            localStorage.setItem('token', token);
-            if (roleId !== undefined && roleId !== null) localStorage.setItem('roleId', String(roleId));
-            localStorage.setItem('nomPrenom', nomPrenom);
+            localStorage.setItem('token', accessToken || '');
+            localStorage.setItem('permissions', JSON.stringify(permissions));
+            localStorage.setItem('roles', JSON.stringify(roles));
+            localStorage.setItem('currentUser', JSON.stringify(user || {}));
+            localStorage.setItem('nomPrenom', user?.email || 'Utilisateur');
 
-            // Route based on roleId from database
-            // Roles: 1=admin_informatique, 2=admin_cabinet, 3=user, 4=directeur
-            if (roleId === 1) {
+            if (primaryRole === 'admin_informatique') {
                 // Admin Informatique
                 navigate('/admin-dashboard');
-            } else if (roleId === 2) {
+            } else if (primaryRole === 'admin_cabinet') {
                 // Admin Cabinet
                 navigate('/admin-cabinet/dashboard');
-            } else if (roleId === 3) {
+            } else if (primaryRole === 'user') {
                 // User/Member
                 navigate('/dashboard');
-            } else if (roleId === 4) {
+            } else if (primaryRole === 'directeur') {
                 // Directeur
                 navigate('/directeur/acceuildashboard');
             } else {

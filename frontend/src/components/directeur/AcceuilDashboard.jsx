@@ -80,6 +80,17 @@ const AcceuilDashboard = () => {
 
           <div className="nav-group">
             <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <NavItem 
+                icon={<FileText color="white" strokeWidth={2} />} 
+                label="📋 المقررات" 
+                active={activeTab === 'decisions-full'} 
+                onClick={() => setActiveTab('decisions-full')} 
+              />
+            </div>
+          </div>
+
+          <div className="nav-group">
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
               <NavItem icon={<Briefcase color="white" strokeWidth={2} />} label=" إدارة اللجان" active={activeTab === 'comites'} onClick={() => setActiveTab('comites')} />
             </div>
           </div>
@@ -128,6 +139,7 @@ const AcceuilDashboard = () => {
               {activeTab === 'stats' && <div><h2>الإحصائيات</h2></div>}
               {activeTab === 'sujets' && <SujetDecisionManagement />}
               {activeTab === 'decisions' && <DecisionManagement />}
+              {activeTab === 'decisions-full' && <DecisionManagement />}
               {activeTab === 'comites' && <ComitesManagement />}
             </>
           )}

@@ -57,7 +57,7 @@ const PermissionsList = () => {
       const payload = { name: formData.name };
 
       if (editingId) {
-        await axios.put(`${API_CONFIG.ADMIN.PERMISSIONS}/${editingId}`, payload);
+        await axios.patch(`${API_CONFIG.ADMIN.PERMISSIONS}/${editingId}`, payload);
         showToast('تم تحديث الصلاحية بنجاح', 'success');
       } else {
         await axios.post(API_CONFIG.ADMIN.PERMISSIONS, payload);

@@ -1,0 +1,9 @@
+{
+  "name": "pv-management-root",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run start:dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:all": "start \"backend\" cmd /c \"npm --prefix backend run start:dev\" && npm --prefix frontend run dev"
+  }
+}

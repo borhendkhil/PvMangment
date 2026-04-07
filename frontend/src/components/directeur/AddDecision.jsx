@@ -1,64 +1,72 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import axios from 'axios';
 import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
 import ModalPortal from '../common/ModalPortal';
-
-const API_BASE = 'http://localhost:9091/api';
+import API_CONFIG from '../../config/api';
+import usePermissions from '../../hooks/usePermissions';
 
 const AddDecision = ({ sujetId, onSuccess }) => {
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    titre: '',
-    description: ''
-  });
+  const [status, setStatus] = useState('active');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const { hasPermission } = usePermissions();
 
   const handleOpenModal = () => {
     setShowModal(true);
-    setFormData({ titre: '', description: '' });
+    setStatus('active');
+    setSelectedFile(null);
     setError(null);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData({ titre: '', description: '' });
+    setStatus('active');
+    setSelectedFile(null);
     setError(null);
-  };
-
-  const validateForm = () => {
-    if (!formData.titre || !formData.titre.trim()) {
-      setError('العنوان مطلوب');
-      return false;
-    }
-    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
+    if (!sujetId) {
+      setError('الموضوع مطلوب');
       return;
     }
 
     setSubmitting(true);
     try {
-      await axios.post(`${API_BASE}/directeur/process/decisions`, {
-        sujetId: sujetId,
-        titre: formData.titre,
-        description: formData.description
+      if (selectedFile && !hasPermission('MANAGE_DECISION')) {
+        showToast('Permission MANAGE_DECISION refusée, le fichier ne sera pas envoyé', 'warning');
+      }
+
+      const response = await axios.post(API_CONFIG.DIRECTEUR.PROCESS.DECISIONS, {
+        sujetId,
+        statut: status,
       });
-      
-      showToast('تم إضافة المقرر بنجاح', 'success');
+
+      if (selectedFile && response.data?.id) {
+        const formData = new FormData();
+        formData.append('files', selectedFile);
+        await axios.post(API_CONFIG.DIRECTEUR.PROCESS.UPLOAD_FILE(response.data.id), formData);
+      }
+
+      showToast('تمت إضافة القرار بنجاح', 'success');
       handleCloseModal();
       onSuccess?.();
     } catch (err) {
-      const msg = err.response?.data?.message || 'خطأ في إضافة المقرر';
+      console.error('AddDecision save failed:', {
+        message: err?.message,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
+        sujetId,
+        status,
+      });
+      const msg = err.response?.data?.message || 'تعذر إضافة القرار';
       setError(msg);
       showToast(msg, 'error');
-      console.error('Error:', err);
     } finally {
       setSubmitting(false);
     }
@@ -67,33 +75,35 @@ const AddDecision = ({ sujetId, onSuccess }) => {
   return (
     <>
       <button className="btn" onClick={handleOpenModal} disabled={!sujetId}>
-        <Plus size={18} /> إضافة مقرر جديد
+        <Plus size={18} /> إضافة قرار
       </button>
 
       <ModalPortal isOpen={showModal} onClose={handleCloseModal}>
-        <h3>إضافة مقرر جديد</h3>
+        <h3>إضافة قرار</h3>
         {error && <div className="error">{error}</div>}
         <form onSubmit={handleSubmit}>
-          <label>العنوان *</label>
-          <input
-            type="text"
-            required
-            value={formData.titre}
-            onChange={(e) => setFormData({...formData, titre: e.target.value})}
-            placeholder="أدخل عنوان المقرر"
-          />
+          <label>الحالة</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="active">نشطة</option>
+            <option value="inactive">غير نشطة</option>
+          </select>
 
-          <label>الوصف</label>
-          <input
-            type="text"
-            value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value})}
-            placeholder="أدخل وصف المقرر"
-          />
+          <label>الملف</label>
+          <label className="file-picker">
+            <input
+              type="file"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              style={{ display: 'none' }}
+            />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Upload size={16} />
+              {selectedFile ? selectedFile.name : 'اختر ملفًا'}
+            </span>
+          </label>
 
           <div className="modal-actions">
             <button type="submit" className="btn" disabled={submitting}>
-              {submitting ? 'جاري الحفظ...' : 'حفظ'}
+              {submitting ? 'جارٍ الحفظ...' : 'حفظ'}
             </button>
             <button type="button" className="btn secondary" onClick={handleCloseModal}>
               إلغاء

@@ -1,45 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Plus, Trash2, FileText, CheckCircle, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronRight, ChevronLeft, Plus, FileText, CheckCircle, X, Upload } from 'lucide-react';
 import axios from 'axios';
 import API_CONFIG from '../../config/api';
 import { showToast } from '../common/Toaster';
 import '../../styles/admindashboard.css';
+import usePermissions from '../../hooks/usePermissions';
 
 const ProcessWizard = ({ onClose, onSuccess }) => {
-  const [step, setStep] = useState(1); // 1: Sujet, 2: Décision, 3: PDF, 4: Révision
-  
-  // Step 1: Sujet
+  const [step, setStep] = useState(1);
   const [sujets, setSujets] = useState([]);
   const [selectedSujet, setSelectedSujet] = useState(null);
   const [newSujet, setNewSujet] = useState({ sujet: '', description: '' });
   const [loadingSujets, setLoadingSujets] = useState(false);
-
-  // Step 2: Décision
-  const [decisionData, setDecisionData] = useState({
-    titre: '',
-    description: '',
-    numAdmin: '',
-    statut: 'brouillon'
-  });
-
-  // Step 3: PDF
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfs, setPdfs] = useState([]);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-
-  // Step 4: Comité & Membres
-  const [selectedComite, setSelectedComite] = useState(null);
-  const [comites, setComites] = useState([]);
+  const [decisionData, setDecisionData] = useState({ statut: 'active' });
+  const [decisionId, setDecisionId] = useState(null);
+  const [decisionFile, setDecisionFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (step === 1) {
       fetchSujets();
-    } else if (step === 4) {
-      fetchComites();
     }
   }, [step]);
 
-  // ===== STEP 1: SUJET =====
   const fetchSujets = async () => {
     setLoadingSujets(true);
     try {
@@ -47,132 +31,140 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
       setSujets(res.data || []);
     } catch (err) {
       console.error('Erreur chargement sujets', err);
-      showToast('Erreur chargement sujets', 'error');
+      showToast('تعذر تحميل المواضيع', 'error');
+    } finally {
+      setLoadingSujets(false);
     }
-    setLoadingSujets(false);
   };
 
   const handleCreateSujet = async () => {
     if (!newSujet.sujet.trim()) {
-      showToast('Le sujet est obligatoire', 'error');
+      showToast('الموضوع إلزامي', 'error');
       return;
     }
+
     try {
       const res = await axios.post(API_CONFIG.DIRECTEUR.PROCESS.SUJETS, newSujet);
       setSujets([...sujets, res.data]);
       setSelectedSujet(res.data.id);
       setNewSujet({ sujet: '', description: '' });
-      showToast('Sujet créé avec succès', 'success');
+      showToast('تم إنشاء الموضوع بنجاح', 'success');
     } catch (err) {
-      showToast('Erreur création sujet', 'error');
+      console.error('ProcessWizard subject creation failed:', {
+        message: err?.message,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
+        newSujet,
+      });
+      showToast('تعذر إنشاء الموضوع', 'error');
     }
   };
 
-  // ===== STEP 2: DÉCISION =====
   const handleCreateDecision = async () => {
-    if (!selectedSujet || !decisionData.titre.trim() || !decisionData.numAdmin.trim()) {
-      showToast('Veuillez remplir tous les champs', 'error');
-      return;
+    if (!selectedSujet) {
+      showToast('يرجى اختيار موضوع', 'error');
+      return null;
     }
 
     try {
       const payload = {
         sujetId: selectedSujet,
-        titre: decisionData.titre,
-        description: decisionData.description,
-        numAdmin: decisionData.numAdmin,
-        statut: decisionData.statut
+        statut: decisionData.statut,
       };
       const res = await axios.post(API_CONFIG.DIRECTEUR.PROCESS.DECISIONS, payload);
-      showToast('Décision créée', 'success');
-      
-      // Marquer comme actuelle
-      await axios.put(API_CONFIG.DIRECTEUR.PROCESS.MARK_CURRENT(res.data.id));
-      
-      return res.data.id;
+      showToast('تم إنشاء القرار', 'success');
+      return res.data?.id || null;
     } catch (err) {
-      showToast('Erreur création décision', 'error');
+      console.error('ProcessWizard decision creation failed:', {
+        message: err?.message,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
+        selectedSujet,
+        decisionData,
+      });
+      showToast('تعذر إنشاء القرار', 'error');
       throw err;
     }
   };
 
-  // ===== STEP 3: PDF =====
-  const handleUploadPdf = async (decisionId) => {
-    if (!pdfFile) {
-      showToast('Veuillez sélectionner un PDF', 'error');
+  const handleUploadFile = async (id) => {
+    if (!decisionFile || !id) {
       return;
     }
 
-    setUploadingPdf(true);
+    if (!hasPermission('MANAGE_DECISION')) {
+      showToast('Permission MANAGE_DECISION refusée, le fichier ne sera pas envoyé', 'warning');
+      return false;
+    }
+
+    setUploadingFile(true);
     try {
       const formData = new FormData();
-      formData.append('file', pdfFile);
-      
-      const res = await axios.post(
-        API_CONFIG.DIRECTEUR.PROCESS.UPLOAD_PDF(decisionId),
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-      
-      setPdfs([...pdfs, res.data]);
-      setPdfFile(null);
-      showToast('PDF uploadé avec succès', 'success');
+      formData.append('files', decisionFile);
+      await axios.post(API_CONFIG.DIRECTEUR.PROCESS.UPLOAD_FILE(id), formData);
+      showToast('تم رفع الملف بنجاح', 'success');
     } catch (err) {
-      showToast('Erreur upload PDF', 'error');
-    }
-    setUploadingPdf(false);
-  };
-
-  const handleDeletePdf = async (pdfId) => {
-    try {
-      await axios.delete(API_CONFIG.DIRECTEUR.PROCESS.DELETE_PDF(pdfId));
-      setPdfs(pdfs.filter(p => p.id !== pdfId));
-      showToast('PDF supprimé', 'success');
-    } catch (err) {
-      showToast('Erreur suppression PDF', 'error');
+      console.error('ProcessWizard upload failed:', {
+        message: err?.message,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
+        decisionId: id,
+        fileName: decisionFile?.name,
+      });
+      showToast('تعذر رفع الملف', 'error');
+      throw err;
+    } finally {
+      setUploadingFile(false);
     }
   };
 
-  // ===== STEP 4: COMITÉ =====
-  const fetchComites = async () => {
-    try {
-      const res = await axios.get(API_CONFIG.DIRECTEUR.COMITES);
-      setComites(res.data || []);
-    } catch (err) {
-      showToast('Erreur chargement comités', 'error');
-    }
-  };
-
-  // ===== NAVIGATION =====
   const handleNext = async () => {
     if (step === 1 && !selectedSujet) {
-      showToast('Veuillez sélectionner ou créer un sujet', 'error');
+      showToast('يرجى اختيار أو إنشاء موضوع', 'error');
       return;
     }
+
     if (step === 2) {
       try {
-        const decisionId = await handleCreateDecision();
+        const id = await handleCreateDecision();
+        setDecisionId(id);
         setStep(3);
       } catch (err) {
+        console.error('ProcessWizard step 2 failed:', {
+          message: err?.message,
+          responseStatus: err?.response?.status,
+          responseData: err?.response?.data,
+          selectedSujet,
+          decisionData,
+        });
         return;
       }
-    } else if (step === 3) {
-      setStep(4);
-    } else if (step === 4) {
-      finishProcess();
-    } else {
-      setStep(step + 1);
+      return;
+    }
+
+    if (step === 3) {
+      try {
+        if (decisionFile && decisionId) {
+          await handleUploadFile(decisionId);
+        }
+        showToast('تم إتمام العملية بنجاح!', 'success');
+        onSuccess && onSuccess();
+        onClose && onClose();
+      } catch (err) {
+        console.error('ProcessWizard step 3 failed:', {
+          message: err?.message,
+          responseStatus: err?.response?.status,
+          responseData: err?.response?.data,
+          decisionId,
+          decisionFileName: decisionFile?.name,
+        });
+        return;
+      }
     }
   };
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
-  };
-
-  const finishProcess = () => {
-    showToast('Processus finalisé avec succès!', 'success');
-    onSuccess && onSuccess();
-    onClose && onClose();
   };
 
   return (
@@ -192,13 +184,13 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
         background: '#fff',
         borderRadius: '12px',
         width: '90%',
-        maxWidth: '700px',
+        maxWidth: '720px',
         maxHeight: '80vh',
         overflow: 'auto',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        direction: 'rtl'
+        direction: 'rtl',
+        fontFamily: 'Tajawal, sans-serif'
       }}>
-        {/* Header */}
         <div style={{
           background: 'linear-gradient(135deg, #69c0e2 0%, #327e9e 100%)',
           padding: '20px',
@@ -207,7 +199,7 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h2 style={{ margin: 0 }}>عملية إنشاء قرار جديد</h2>
+        <h2 style={{ margin: 0 }}>إنشاء قرار</h2>
           <button
             onClick={onClose}
             style={{
@@ -222,7 +214,6 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
           </button>
         </div>
 
-        {/* Progress Steps */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -230,7 +221,7 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
           background: '#f5f5f5',
           borderBottom: '1px solid #ddd'
         }}>
-          {['الموضوع', 'القرار', 'المستند', 'انتهاء'].map((label, idx) => (
+          {['الموضوع', 'القرار', 'الملف'].map((label, idx) => (
             <div key={idx} style={{
               textAlign: 'center',
               flex: 1,
@@ -255,19 +246,16 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
           ))}
         </div>
 
-        {/* Content */}
         <div style={{ padding: '30px' }}>
-          {/* STEP 1: SUJET */}
           {step === 1 && (
             <div>
-              <h3>اختر أو أنشئ موضوع</h3>
-              
+              <h3>اختر أو أنشئ موضوعًا</h3>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-                  الموضوعات الموجودة:
+                  المواضيع الموجودة:
                 </label>
                 {loadingSujets ? (
-                  <p>جاري التحميل...</p>
+                  <p>جارٍ التحميل...</p>
                 ) : (
                   <select
                     value={selectedSujet || ''}
@@ -280,8 +268,8 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
                       fontSize: '14px'
                     }}
                   >
-                    <option value="">-- اختر موضوع --</option>
-                    {sujets.map(s => (
+                    <option value="">-- اختر موضوعًا --</option>
+                    {sujets.map((s) => (
                       <option key={s.id} value={s.id}>{s.sujet}</option>
                     ))}
                   </select>
@@ -289,12 +277,12 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
               </div>
 
               <div style={{ borderTop: '2px solid #ddd', paddingTop: '20px', marginTop: '20px' }}>
-                <h4>أو إنشاء موضوع جديد:</h4>
+                <h4>إنشاء موضوع جديد:</h4>
                 <input
                   type="text"
                   placeholder="الموضوع"
                   value={newSujet.sujet}
-                  onChange={(e) => setNewSujet({...newSujet, sujet: e.target.value})}
+                  onChange={(e) => setNewSujet({ ...newSujet, sujet: e.target.value })}
                   style={{
                     width: '100%',
                     padding: '10px',
@@ -307,7 +295,7 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
                 <textarea
                   placeholder="الوصف (اختياري)"
                   value={newSujet.description}
-                  onChange={(e) => setNewSujet({...newSujet, description: e.target.value})}
+                  onChange={(e) => setNewSujet({ ...newSujet, description: e.target.value })}
                   style={{
                     width: '100%',
                     padding: '10px',
@@ -331,62 +319,19 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
                     fontWeight: 'bold'
                   }}
                 >
-                  <Plus size={16} style={{marginRight: '5px'}} />
-                  إنشاء موضوع جديد
+                  <Plus size={16} style={{ marginRight: '5px' }} />
+                  إنشاء موضوع
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: DÉCISION */}
           {step === 2 && (
             <div>
-              <h3>إنشاء قرار جديد</h3>
-              <input
-                type="text"
-                placeholder="الرقم الإداري"
-                value={decisionData.numAdmin}
-                onChange={(e) => setDecisionData({...decisionData, numAdmin: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginBottom: '15px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <input
-                type="text"
-                placeholder="عنوان القرار"
-                value={decisionData.titre}
-                onChange={(e) => setDecisionData({...decisionData, titre: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginBottom: '15px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <textarea
-                placeholder="الوصف"
-                value={decisionData.description}
-                onChange={(e) => setDecisionData({...decisionData, description: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  height: '100px',
-                  marginBottom: '15px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  boxSizing: 'border-box'
-                }}
-              />
+              <h3>حالة القرار</h3>
               <select
                 value={decisionData.statut}
-                onChange={(e) => setDecisionData({...decisionData, statut: e.target.value})}
+                onChange={(e) => setDecisionData({ ...decisionData, statut: e.target.value })}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -395,17 +340,15 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
                   boxSizing: 'border-box'
                 }}
               >
-                <option value="brouillon">مسودة</option>
-                <option value="approuvée">موافق عليها</option>
-                <option value="rejetée">مرفوضة</option>
+                <option value="active">نشطة</option>
+                <option value="inactive">غير نشطة</option>
               </select>
             </div>
           )}
 
-          {/* STEP 3: PDF */}
           {step === 3 && (
             <div>
-              <h3>المستندات والملفات</h3>
+              <h3>إرفاق ملف القرار</h3>
               <div style={{
                 border: '2px dashed #69c0e2',
                 borderRadius: '8px',
@@ -416,68 +359,25 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
               }}>
                 <input
                   type="file"
-                  accept=".pdf"
-                  onChange={(e) => setPdfFile(e.target.files?.[0])}
+                  onChange={(e) => setDecisionFile(e.target.files?.[0] || null)}
                   style={{ display: 'none' }}
-                  id="pdfInput"
+                  id="decisionFileInput"
                 />
-                <label htmlFor="pdfInput" style={{ cursor: 'pointer', display: 'block' }}>
+                <label htmlFor="decisionFileInput" style={{ cursor: 'pointer', display: 'block' }}>
                   <FileText size={32} style={{ color: '#69c0e2', marginBottom: '10px' }} />
-                  <p>اضغط لاختيار ملف PDF أو اسحبه هنا</p>
-                  {pdfFile && <p style={{ color: 'green' }}>✓ {pdfFile.name}</p>}
+                  <p>انقر لاختيار ملف</p>
+                  {decisionFile && <p style={{ color: 'green' }}>✓ {decisionFile.name}</p>}
                 </label>
               </div>
-              {pdfFile && (
-                <button
-                  onClick={() => handleUploadPdf(/* decisionId will be passed */)}
-                  disabled={uploadingPdf}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: uploadingPdf ? '#ccc' : '#2ecc71',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: uploadingPdf ? 'not-allowed' : 'pointer',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {uploadingPdf ? 'جاري الرفع...' : 'رفع المستند'}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* STEP 4: REVIEW */}
-          {step === 4 && (
-            <div>
-              <h3>اختر لجنة أو أكمل لاحقاً</h3>
-              <select
-                value={selectedComite || ''}
-                onChange={(e) => setSelectedComite(e.target.value ? parseInt(e.target.value) : null)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  marginBottom: '20px'
-                }}
-              >
-                <option value="">-- اختر لجنة --</option>
-                {comites.map(c => (
-                  <option key={c.id} value={c.id}>{c.sujet}</option>
-                ))}
-              </select>
               <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '6px' }}>
-                <p style={{ margin: '5px 0' }}>✓ الموضوع محدد</p>
-                <p style={{ margin: '5px 0' }}>✓ القرار مُنشأ</p>
-                <p style={{ margin: '5px 0' }}>✓ ملفات تم رفعها</p>
+                <p style={{ margin: '5px 0' }}>✓ تم اختيار الموضوع</p>
+                <p style={{ margin: '5px 0' }}>✓ تم إنشاء القرار</p>
+                <p style={{ margin: '5px 0' }}>✓ تم إرفاق الملف</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Navigation */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -505,6 +405,7 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
           </button>
           <button
             onClick={handleNext}
+            disabled={uploadingFile}
             style={{
               padding: '10px 20px',
               background: '#69c0e2',
@@ -518,8 +419,9 @@ const ProcessWizard = ({ onClose, onSuccess }) => {
               fontWeight: 'bold'
             }}
           >
-            {step === 4 ? 'إنهاء' : 'التالي'}
-            {step < 4 && <ChevronRight size={16} />}
+            {step === 3 ? 'إنهاء' : 'التالي'}
+            {step < 3 && <ChevronRight size={16} />}
+            {step === 3 && <Upload size={16} />}
           </button>
         </div>
       </div>

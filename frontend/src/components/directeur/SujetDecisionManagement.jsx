@@ -5,8 +5,6 @@ import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
 import ModalPortal from '../common/ModalPortal';
 
-const API_BASE = 'http://localhost:9091/api';
-
 const SujetDecisionManagement = () => {
   const [sujets, setSujets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +24,7 @@ const SujetDecisionManagement = () => {
   const fetchSujets = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/directeur/process/sujets`);
+      const res = await axios.get(API_CONFIG.DIRECTEUR.PROCESS.SUJETS);
       setSujets(res.data || []);
     } catch (err) {
       console.error('Sujets fetch error:', err);
@@ -72,10 +70,10 @@ const SujetDecisionManagement = () => {
       };
 
       if (editingSujet) {
-        await axios.put(`${API_BASE}/directeur/process/sujets/${editingSujet.id}`, payload, { headers });
+        await axios.patch(`${API_CONFIG.DIRECTEUR.PROCESS.SUJETS}/${editingSujet.id}`, payload, { headers });
         showToast('تم تحديث الموضوع', 'success');
       } else {
-        await axios.post(`${API_BASE}/directeur/process/sujets`, payload, { headers });
+        await axios.post(API_CONFIG.DIRECTEUR.PROCESS.SUJETS, payload, { headers });
         showToast('تم إضافة الموضوع', 'success');
       }
       
@@ -92,7 +90,7 @@ const SujetDecisionManagement = () => {
     if (!window.confirm('هل تريد حذف هذا الموضوع؟')) return;
     
     try {
-      await axios.delete(`${API_BASE}/directeur/process/sujets/${id}`);
+      await axios.delete(`${API_CONFIG.DIRECTEUR.PROCESS.SUJETS}/${id}`);
       showToast('تم حذف الموضوع', 'success');
       fetchSujets();
     } catch (err) {

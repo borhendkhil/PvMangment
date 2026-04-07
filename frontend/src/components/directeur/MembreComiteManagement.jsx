@@ -1,386 +1,355 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import axios from '../../lib/httpClient';
 import { Trash2, Plus, Edit2, Check, X } from 'lucide-react';
 import Toaster from '../common/Toaster';
 import '../../styles/membrecomite.css';
+import API_CONFIG from '../../config/api';
 
-const MembreComiteManagement = ({ idComite, onClose }) => {
-    const API_BASE = 'http://localhost:9091/api';
-    
-    // État du utilisateur - récupéré du localStorage
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    const idDirec = currentUser.direction?.idDirec || parseInt(localStorage.getItem('userDirectionId'));
-    
-    // États
-    const [membres, setMembres] = useState([]);
-    const [employes, setEmployes] = useState([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editingId, setEditingId] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [toaster, setToaster] = useState({ show: false, message: '', type: 'success' });
-    
-    const [formData, setFormData] = useState({
-        matMembre: '',
-        grade: '',
-        roleComite: ''
-    });
+const MembreComiteManagement = ({ idComite, onClose, embedded = false, onMembersChange }) => {
+  const [membres, setMembres] = useState([]);
+  const [employes, setEmployes] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [editingKey, setEditingKey] = useState(null);
+  const [toaster, setToaster] = useState({ show: false, message: '', type: 'success' });
 
-    // Charger les membres du comité et employés disponibles
-    useEffect(() => {
-        if (idComite && idDirec) {
-            fetchMembres();
-            fetchEmployesDisponibles();
-        }
-    }, [idComite, idDirec]);
+  const [formData, setFormData] = useState({
+    employeId: '',
+    roleComiteId: '',
+  });
 
-    const showToast = (message, type = 'success') => {
-        setToaster({ show: true, message, type });
-        setTimeout(() => setToaster({ show: false, message: '', type: 'success' }), 3000);
-    };
+  useEffect(() => {
+    if (idComite) {
+      fetchMembres();
+      fetchEmployes();
+      fetchRoles();
+    }
+  }, [idComite]);
 
-    const fetchMembres = async () => {
-        try {
-            const response = await axios.get(`${API_BASE}/membres-comite/comite/${idComite}`);
-            setMembres(response.data || []);
-        } catch (error) {
-            console.error('Erreur lors du chargement des membres:', error);
-            showToast('Erreur lors du chargement des membres', 'error');
-        }
-    };
+  const showToast = (message, type = 'success') => {
+    setToaster({ show: true, message, type });
+    setTimeout(() => setToaster({ show: false, message: '', type: 'success' }), 3000);
+  };
 
-    const fetchEmployesDisponibles = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(
-                `${API_BASE}/membres-comite/comite/${idComite}/employes-disponibles/${idDirec}`
-            );
-            setEmployes(response.data || []);
-        } catch (error) {
-            console.error('Erreur lors du chargement des employés disponibles:', error);
-            showToast('Erreur lors du chargement des employés', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchMembres = async () => {
+    try {
+      const response = await axios.get(API_CONFIG.COMITE_MEMBERS);
+      setMembres((response.data || []).filter((member) => String(member.comiteId) === String(idComite)));
+    } catch (error) {
+      console.error('Erreur lors du chargement des membres:', error);
+      showToast('Erreur lors du chargement des membres', 'error');
+      setMembres([]);
+    }
+  };
 
-    const handleAddMembre = async (e) => {
-        e.preventDefault();
-        
-        if (!formData.matMembre) {
-            showToast('Veuillez sélectionner un employé', 'error');
-            return;
-        }
+  const fetchEmployes = async () => {
+    try {
+      const response = await axios.get(API_CONFIG.ADMIN.EMPLOYES);
+      setEmployes(response.data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des employés:', error);
+      showToast('Erreur lors du chargement des employés', 'error');
+      setEmployes([]);
+    }
+  };
 
-        try {
-            setLoading(true);
-            await axios.post(`${API_BASE}/membres-comite/comite/${idComite}`, {
-                matMembre: formData.matMembre,
-                grade: formData.grade || '',
-                roleComite: formData.roleComite || '',
-                idDirec: idDirec
-            });
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get(API_CONFIG.COMITE_ROLES);
+      setRoles(response.data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des rôles:', error);
+      showToast('Erreur lors du chargement des rôles', 'error');
+      setRoles([]);
+    }
+  };
 
-            showToast('Membre ajouté avec succès', 'success');
-            resetForm();
-            await fetchMembres();
-            await fetchEmployesDisponibles();
-        } catch (error) {
-            console.error('Erreur lors de l\'ajout du membre:', error);
-            const errorMsg = error.response?.data?.error || 'Erreur lors de l\'ajout du membre';
-            showToast(errorMsg, 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleAddMembre = async (e) => {
+    e.preventDefault();
 
-    const handleDeleteMembre = async (matMembre) => {
-        if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce membre?')) {
-            return;
-        }
+    if (!formData.employeId) {
+      showToast('Veuillez sélectionner un employé', 'error');
+      return;
+    }
 
-        try {
-            setLoading(true);
-            await axios.delete(
-                `${API_BASE}/membres-comite/comite/${idComite}/membre/${matMembre}`
-            );
+    try {
+      setLoading(true);
+      await axios.post(API_CONFIG.COMITE_MEMBERS, {
+        comiteId: parseInt(idComite),
+        employeId: parseInt(formData.employeId),
+        roleComiteId: formData.roleComiteId ? parseInt(formData.roleComiteId) : null,
+      });
 
-            showToast('Membre supprimé avec succès', 'success');
-            await fetchMembres();
-            await fetchEmployesDisponibles();
-        } catch (error) {
-            console.error('Erreur lors de la suppression:', error);
-            const errorMsg = error.response?.data?.error || 'Erreur lors de la suppression';
-            showToast(errorMsg, 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+      showToast('Membre ajouté avec succès', 'success');
+      resetForm();
+      await fetchMembres();
+      onMembersChange?.();
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du membre:", error);
+      const errorMsg = error.response?.data?.message || "Erreur lors de l'ajout du membre";
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleEditMembre = async (membre) => {
-        if (!membre.grade || !membre.roleComite) {
-            showToast('Veuillez remplir tous les champs', 'error');
-            return;
-        }
+  const handleDeleteMembre = async (employeId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce membre?')) {
+      return;
+    }
 
-        try {
-            setLoading(true);
-            await axios.put(
-                `${API_BASE}/membres-comite/comite/${idComite}/membre/${membre.matMembre}`,
-                {
-                    grade: membre.grade,
-                    roleComite: membre.roleComite
-                }
-            );
+    try {
+      setLoading(true);
+      await axios.delete(`${API_CONFIG.COMITE_MEMBERS}/${idComite}/${employeId}`);
+      showToast('Membre supprimé avec succès', 'success');
+      await fetchMembres();
+      onMembersChange?.();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      const errorMsg = error.response?.data?.message || 'Erreur lors de la suppression';
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            showToast('Membre modifié avec succès', 'success');
-            setEditingId(null);
-            await fetchMembres();
-        } catch (error) {
-            console.error('Erreur lors de la modification:', error);
-            const errorMsg = error.response?.data?.error || 'Erreur lors de la modification';
-            showToast(errorMsg, 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleEditMembre = async (membre) => {
+    try {
+      setLoading(true);
+      await axios.patch(`${API_CONFIG.COMITE_MEMBERS}/${idComite}/${membre.employeId}`, {
+        roleComiteId: membre.roleComiteId ? parseInt(membre.roleComiteId) : (membre.roleComite?.id ? parseInt(membre.roleComite.id) : null),
+      });
 
-    const updateMembreField = (matMembre, field, value) => {
-        setMembres(membres.map(m =>
-            m.matMembre === matMembre ? { ...m, [field]: value } : m
-        ));
-    };
+      showToast('Membre modifié avec succès', 'success');
+      setEditingKey(null);
+      await fetchMembres();
+      onMembersChange?.();
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+      const errorMsg = error.response?.data?.message || 'Erreur lors de la modification';
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const resetForm = () => {
-        setFormData({ matMembre: '', grade: '', roleComite: '' });
-        setShowForm(false);
-        setEditingId(null);
-    };
+  const resetForm = () => {
+    setFormData({ employeId: '', roleComiteId: '' });
+    setShowForm(false);
+    setEditingKey(null);
+  };
 
-    const getEmployeName = (matMembre) => {
-        const emp = employes.find(e => e.matMembre === matMembre);
-        return emp ? `${emp.prenom} ${emp.nom}` : matMembre;
-    };
+  const getEmployeName = (employeId) => {
+    const emp = employes.find((item) => String(item.id) === String(employeId));
+    return emp ? `${emp.prenom} ${emp.nom}` : employeId;
+  };
 
-    // Filtrer les membres de la direction actuelle
-    const membresDirec = membres.filter(m => m.idDirec === idDirec);
+  return (
+    <div
+      className={`membre-comite-container${embedded ? ' membre-comite-embedded' : ''}`}
+      dir="rtl"
+      style={embedded ? embeddedWrapperStyle : undefined}
+    >
+      {toaster.show && (
+        <Toaster
+          message={toaster.message}
+          type={toaster.type}
+          onClose={() => setToaster({ ...toaster, show: false })}
+        />
+      )}
 
-    return (
-        <div className="membre-comite-container" dir="rtl">
-            {toaster.show && (
-                <Toaster 
-                    message={toaster.message} 
-                    type={toaster.type}
-                    onClose={() => setToaster({ ...toaster, show: false })}
-                />
-            )}
-
-            <div className="membre-header">
-                <h2>Gestion des Membres du Comité</h2>
-                <button onClick={onClose} className="btn-close">✕</button>
-            </div>
-
-            <div className="membre-content">
-                {/* Section Ajouter un Membre */}
-                <div className="add-membre-section">
-                    {!showForm ? (
-                        <button 
-                            onClick={() => setShowForm(true)}
-                            className="btn btn-primary"
-                            disabled={loading || employes.length === 0}
-                        >
-                            <Plus size={18} /> Ajouter un Membre
-                        </button>
-                    ) : (
-                        <form onSubmit={handleAddMembre} className="membre-form">
-                            <div className="form-group">
-                                <label>Employé *</label>
-                                <select
-                                    value={formData.matMembre}
-                                    onChange={(e) => setFormData({...formData, matMembre: e.target.value})}
-                                    disabled={loading}
-                                    required
-                                >
-                                    <option value="">-- Sélectionner un employé --</option>
-                                    {employes.map(emp => (
-                                        <option key={emp.matMembre} value={emp.matMembre}>
-                                            {emp.prenom} {emp.nom} ({emp.matMembre})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Grade</label>
-                                <input
-                                    type="text"
-                                    value={formData.grade}
-                                    onChange={(e) => setFormData({...formData, grade: e.target.value})}
-                                    placeholder="Ex: Directeur, Chef de service"
-                                    disabled={loading}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Rôle dans le Comité</label>
-                                <select
-                                    value={formData.roleComite}
-                                    onChange={(e) => setFormData({...formData, roleComite: e.target.value})}
-                                    disabled={loading}
-                                >
-                                    <option value="">-- Sélectionner un rôle --</option>
-                                    <option value="Président">Président</option>
-                                    <option value="Vice-Président">Vice-Président</option>
-                                    <option value="Secrétaire">Secrétaire</option>
-                                    <option value="Rapporteur">Rapporteur</option>
-                                    <option value="Membre">Membre</option>
-                                </select>
-                            </div>
-
-                            <div className="form-actions">
-                                <button 
-                                    type="submit" 
-                                    className="btn btn-success"
-                                    disabled={loading}
-                                >
-                                    <Check size={18} /> Ajouter
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={resetForm}
-                                    className="btn btn-secondary"
-                                    disabled={loading}
-                                >
-                                    <X size={18} /> Annuler
-                                </button>
-                            </div>
-                        </form>
-                    )}
-                </div>
-
-                {/* Section Liste des Membres */}
-                <div className="membres-list-section">
-                    <h3>Membres de votre Direction ({membresDirec.length})</h3>
-                    
-                    {membresDirec.length === 0 ? (
-                        <p className="empty-message">Aucun membre de votre direction dans ce comité</p>
-                    ) : (
-                        <div className="membres-table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Employé</th>
-                                        <th>Grade</th>
-                                        <th>Rôle</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {membresDirec.map(membre => (
-                                        <tr key={membre.matMembre} className={editingId === membre.matMembre ? 'editing' : ''}>
-                                            <td>
-                                                <strong>{membre.lib}</strong>
-                                                <br />
-                                                <small>{membre.matMembre}</small>
-                                            </td>
-                                            <td>
-                                                {editingId === membre.matMembre ? (
-                                                    <input
-                                                        type="text"
-                                                        value={membre.grade || ''}
-                                                        onChange={(e) => updateMembreField(membre.matMembre, 'grade', e.target.value)}
-                                                        className="edit-input"
-                                                    />
-                                                ) : (
-                                                    membre.grade || '-'
-                                                )}
-                                            </td>
-                                            <td>
-                                                {editingId === membre.matMembre ? (
-                                                    <select
-                                                        value={membre.roleComite || ''}
-                                                        onChange={(e) => updateMembreField(membre.matMembre, 'roleComite', e.target.value)}
-                                                        className="edit-input"
-                                                    >
-                                                        <option value="">Sélectionner</option>
-                                                        <option value="Président">Président</option>
-                                                        <option value="Vice-Président">Vice-Président</option>
-                                                        <option value="Secrétaire">Secrétaire</option>
-                                                        <option value="Rapporteur">Rapporteur</option>
-                                                        <option value="Membre">Membre</option>
-                                                    </select>
-                                                ) : (
-                                                    membre.roleComite || '-'
-                                                )}
-                                            </td>
-                                            <td className="actions-cell">
-                                                {editingId === membre.matMembre ? (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleEditMembre(membre)}
-                                                            className="btn-action btn-save"
-                                                            disabled={loading}
-                                                            title="Enregistrer"
-                                                        >
-                                                            <Check size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setEditingId(null)}
-                                                            className="btn-action btn-cancel"
-                                                            disabled={loading}
-                                                            title="Annuler"
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={() => setEditingId(membre.matMembre)}
-                                                            className="btn-action btn-edit"
-                                                            disabled={loading}
-                                                            title="Modifier"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteMembre(membre.matMembre)}
-                                                            className="btn-action btn-delete"
-                                                            disabled={loading}
-                                                            title="Supprimer"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
-                {/* Afficher tous les membres si demandé */}
-                {membres.length > membresDirec.length && (
-                    <div className="all-membres-section">
-                        <h4>Autres Membres du Comité ({membres.length - membresDirec.length})</h4>
-                        <div className="autres-membres-list">
-                            {membres.filter(m => m.idDirec !== idDirec).map(membre => (
-                                <div key={membre.matMembre} className="autre-membre-card">
-                                    <strong>{membre.lib}</strong>
-                                    <div className="membre-info">
-                                        <span>{membre.grade || '-'}</span> | 
-                                        <span> {membre.roleComite || '-'}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+      {!embedded && (
+        <div className="membre-header">
+          <h2>Gestion des Membres du Comité</h2>
+          <button onClick={onClose} className="btn-close">×</button>
         </div>
-    );
+      )}
+
+      <div className="membre-content" style={embedded ? embeddedContentStyle : undefined}>
+        <div className="add-membre-section">
+          {!showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              <Plus size={18} /> Ajouter un Membre
+            </button>
+          ) : (
+            <form onSubmit={handleAddMembre} className="membre-form">
+              <div className="form-group">
+                <label>Employé *</label>
+                <select
+                  value={formData.employeId}
+                  onChange={(e) => setFormData({ ...formData, employeId: e.target.value })}
+                  disabled={loading}
+                  required
+                >
+                  <option value="">-- Sélectionner un employé --</option>
+                  {employes.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.prenom} {emp.nom} ({emp.matricule || 'sans matricule'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Rôle dans le Comité</label>
+                <select
+                  value={formData.roleComiteId}
+                  onChange={(e) => setFormData({ ...formData, roleComiteId: e.target.value })}
+                  disabled={loading}
+                >
+                  <option value="">-- Sélectionner un rôle --</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.labelAr || role.label_ar || role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-actions">
+                <button type="submit" className="btn btn-success" disabled={loading}>
+                  <Check size={18} /> Ajouter
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  <X size={18} /> Annuler
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="membres-list-section">
+          <h3>Membres du comité ({membres.length})</h3>
+
+          {membres.length === 0 ? (
+            <p className="empty-message">Aucun membre dans ce comité</p>
+          ) : (
+            <div className="membres-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Employé</th>
+                    <th>Rôle</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {membres.map((membre) => (
+                    <tr key={`${membre.comiteId}-${membre.employeId}`} className={editingKey === membre.employeId ? 'editing' : ''}>
+                      <td>
+                        <strong>{getEmployeName(membre.employeId)}</strong>
+                        <br />
+                        <small>{membre.employeId}</small>
+                      </td>
+                      <td>
+                        {editingKey === membre.employeId ? (
+                          <select
+                            value={membre.roleComiteId || ''}
+                            onChange={(e) => {
+                              setMembres((current) =>
+                                current.map((item) =>
+                                  item.employeId === membre.employeId
+                                  ? { ...item, roleComiteId: e.target.value }
+                                    : item,
+                                ),
+                              );
+                            }}
+                            className="edit-input"
+                          >
+                            <option value="">Sélectionner</option>
+                            {roles.map((role) => (
+                              <option key={role.id} value={role.id}>
+                                {role.labelAr || role.label_ar || role.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          roles.find((role) => String(role.id) === String(membre.roleComiteId || membre.roleComite?.id))?.labelAr ||
+                          roles.find((role) => String(role.id) === String(membre.roleComiteId || membre.roleComite?.id))?.label_ar ||
+                          roles.find((role) => String(role.id) === String(membre.roleComiteId || membre.roleComite?.id))?.name ||
+                          '-'
+                        )}
+                      </td>
+                      <td className="actions-cell">
+                        {editingKey === membre.employeId ? (
+                          <>
+                            <button
+                              onClick={() => handleEditMembre(membre)}
+                              className="btn-action btn-save"
+                              disabled={loading}
+                              title="Enregistrer"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => setEditingKey(null)}
+                              className="btn-action btn-cancel"
+                              disabled={loading}
+                              title="Annuler"
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setEditingKey(membre.employeId)}
+                              className="btn-action btn-edit"
+                              disabled={loading}
+                              title="Modifier"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMembre(membre.employeId)}
+                              className="btn-action btn-delete"
+                              disabled={loading}
+                              title="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default MembreComiteManagement;
+
+const embeddedWrapperStyle = {
+  position: 'static',
+  inset: 'auto',
+  background: 'transparent',
+  display: 'block',
+  justifyContent: 'initial',
+  alignItems: 'initial',
+  zIndex: 'auto',
+  overflow: 'visible',
+  padding: 0,
+};
+
+const embeddedContentStyle = {
+  maxWidth: '100%',
+  width: '100%',
+  maxHeight: 'none',
+  boxShadow: 'none',
+};

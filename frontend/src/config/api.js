@@ -1,68 +1,92 @@
 /**
- * Configuration API Centralisée
- * Utilise les variables d'environnement depuis .env
- * Avec Vite: utiliser import.meta.env avec préfixe VITE_
+ * Centralized API configuration.
+ * NestJS backend exposes routes at the server root, without the old /api prefix.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:9091/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+const API_ROOT = API_BASE.replace(/\/+$/, '');
+
+const withRoot = (path) => `${API_ROOT}${path.startsWith('/') ? '' : '/'}${path}`;
 
 export const API_CONFIG = {
-  BASE: API_BASE,
-  
-  // Endpoints Admin
-  ADMIN: {
-    STATS: `${API_BASE}/admin/stats`,
-    STATS_ROLES: `${API_BASE}/admin/stats/roles-detailed`,
-    STATS_EMPLOYES: `${API_BASE}/admin/stats/employes`,
-    USERS: `${API_BASE}/admin/users`,
-    EMPLOYES: `${API_BASE}/admin/employes`,
-    DIRECTIONS: `${API_BASE}/admin/directions`,
-    ROLES: `${API_BASE}/admin/roles`,
-    FONCTIONS: `${API_BASE}/admin/fonctions`,
-    EMPLOYE_FONCTIONS: `${API_BASE}/admin/employe-fonctions`,
-    PERMISSIONS: `${API_BASE}/admin/permissions`,
-    ROLE_PERMISSIONS: `${API_BASE}/admin/role-permissions`,
-    SECURITY_LOGS: `${API_BASE}/admin/security-logs`,
-    LOGIN_HISTORY: `${API_BASE}/admin/login-history`,
-    ACCESS: `${API_BASE}/admin/access`,
-  },
-  
-  // Endpoints Auth
+  BASE: API_ROOT,
+
   AUTH: {
-    LOGIN: `${API_BASE}/auth/login`,
-    REGISTER: `${API_BASE}/auth/register`,
-    LOGOUT: `${API_BASE}/auth/logout`,
-    REFRESH: `${API_BASE}/auth/refresh`,
+    LOGIN: withRoot('/auth/login'),
   },
-  
-  // Endpoints Directeur
+
+  USERS: withRoot('/users'),
+  DIRECTIONS: withRoot('/directions'),
+  EMPLOYES: withRoot('/employees'),
+  ROLES: withRoot('/roles'),
+  PERMISSIONS: withRoot('/permissions'),
+  FONCTIONS: withRoot('/fonctions'),
+  EMPLOYE_FONCTIONS: withRoot('/employee-functions'),
+  ACTIVITY_LOGS: withRoot('/activity-logs'),
+  COMITES: withRoot('/committees'),
+  COMITE_SESSIONS: withRoot('/committee-sessions'),
+  COMITE_MEMBERS: withRoot('/committee-members'),
+  COMITE_ROLES: withRoot('/committee-roles'),
+  SUBJECTS: withRoot('/decision-subjects'),
+  DECISIONS: withRoot('/decisions'),
+  DECISION_PDFS: withRoot('/decision-pdfs'),
+
+  ADMIN: {
+    BASE: API_ROOT,
+    USERS: withRoot('/users'),
+    EMPLOYES: withRoot('/employees'),
+    DIRECTIONS: withRoot('/directions'),
+    ROLES: withRoot('/roles'),
+    FONCTIONS: withRoot('/fonctions'),
+    EMPLOYE_FONCTIONS: withRoot('/employee-functions'),
+    PERMISSIONS: withRoot('/permissions'),
+    ACTIVITY_LOGS: withRoot('/activity-logs'),
+    COMITES: withRoot('/committees'),
+    COMITE_SESSIONS: withRoot('/committee-sessions'),
+    COMITE_MEMBERS: withRoot('/committee-members'),
+    COMITE_ROLES: withRoot('/committee-roles'),
+    SUBJECTS: withRoot('/decision-subjects'),
+    DECISIONS: withRoot('/decisions'),
+    DECISION_PDFS: withRoot('/decision-pdfs'),
+  },
+
   DIRECTEUR: {
-    DASHBOARD: `${API_BASE}/directeur/dashboard`,
-    COMITES: `${API_BASE}/directeur/comites`,
-    SESSIONS: (comiteId) => `${API_BASE}/directeur/comites/${comiteId}/sessions`,
-    DECISIONS: (sessionId) => `${API_BASE}/directeur/sessions/${sessionId}/decisions`,
-    CREATE_SESSION: `${API_BASE}/directeur/sessions`,
-    CREATE_DECISION: `${API_BASE}/directeur/decisions`,
-    UPDATE_SESSION: (id) => `${API_BASE}/directeur/sessions/${id}`,
-    UPDATE_DECISION: (id) => `${API_BASE}/directeur/decisions/${id}`,
-    DELETE_SESSION: (id) => `${API_BASE}/directeur/sessions/${id}`,
-    DELETE_DECISION: (id) => `${API_BASE}/directeur/decisions/${id}`,
-    
-    // Endpoints Processus Complet
+    DASHBOARD: withRoot('/committees'),
+    COMITES: withRoot('/committees'),
+    DECISIONS_FULL: withRoot('/decisions'),
+    DECISION_FULL: (id) => withRoot(`/decisions/${id}`),
+    DECISION_ARTICLES: (id) => withRoot(`/decisions/${id}/articles`),
+    ARTICLE: (id) => withRoot(`/articles/${id}`),
+    DECISIONS_BY_COMITE: (comiteId) => withRoot(`/decisions?comiteId=${comiteId}`),
+    SESSIONS: (comiteId) => withRoot(`/committee-sessions?comiteId=${comiteId}`),
+    DECISIONS: (sessionId) => withRoot(`/decisions?sessionId=${sessionId}`),
+    CREATE_SESSION: withRoot('/committee-sessions'),
+    CREATE_DECISION: withRoot('/decisions'),
+    UPDATE_SESSION: (id) => withRoot(`/committee-sessions/${id}`),
+    UPDATE_DECISION: (id) => withRoot(`/decisions/${id}`),
+    DELETE_SESSION: (id) => withRoot(`/committee-sessions/${id}`),
+    DELETE_DECISION: (id) => withRoot(`/decisions/${id}`),
     PROCESS: {
-      SUJETS: `${API_BASE}/directeur/process/sujets`,
-      DECISIONS: `${API_BASE}/directeur/process/decisions`,
-      UPLOAD_PDF: (decisionId) => `${API_BASE}/directeur/process/decisions/${decisionId}/upload-pdf`,
-      GET_PDFS: (decisionId) => `${API_BASE}/directeur/process/decisions/${decisionId}/pdfs`,
-      DELETE_PDF: (pdfId) => `${API_BASE}/directeur/process/pdfs/${pdfId}`,
-      MARK_CURRENT: (id) => `${API_BASE}/directeur/process/decisions/${id}/current`,
-    }
+      SUJETS: withRoot('/decision-subjects'),
+      DECISIONS: withRoot('/decisions'),
+      DECISIONS_FULL: withRoot('/decisions'),
+      DECISION_FULL: (id) => withRoot(`/decisions/${id}`),
+      DECISION_ARTICLES: (id) => withRoot(`/decisions/${id}/articles`),
+      ARTICLE: (id) => withRoot(`/articles/${id}`),
+      DECISIONS_BY_COMITE: (comiteId) => withRoot(`/decisions?comiteId=${comiteId}`),
+      UPLOAD_FILE: (decisionId) => withRoot(`/decision-pdfs/upload/${decisionId}`),
+      UPLOAD_PDF: (decisionId) => withRoot(`/decision-pdfs/upload/${decisionId}`),
+      GET_PDFS: () => withRoot('/decision-pdfs'),
+      DELETE_PDF: (pdfId) => withRoot(`/decision-pdfs/${pdfId}`),
+      MARK_CURRENT: (id) => withRoot(`/decisions/${id}/current`),
+      DELETE_DECISION: (id) => withRoot(`/decisions/${id}`),
+      FILES_BASE: API_ROOT,
+    },
   },
-  
-  // Endpoints User
+
   USER: {
-    PROFILE: `${API_BASE}/user/profile`,
-    DASHBOARD: `${API_BASE}/user/dashboard`,
+    PROFILE: withRoot('/users/me'),
+    DASHBOARD: withRoot('/users/dashboard'),
   },
 };
 

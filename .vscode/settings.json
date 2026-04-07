@@ -44,5 +44,6 @@
     "sujet",
     "utilisateurs",
     "الإلكتروني"
-]
+],
+"java.compile.nullAnalysis.mode": "automatic"
 }

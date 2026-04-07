@@ -96,14 +96,14 @@ const EmployeFonctionsList = () => {
 
     try {
       const payload = {
-        employe: { id: parseInt(formData.employeId) },
-        fonction: { id: parseInt(formData.fonctionId) },
+        employeId: parseInt(formData.employeId),
+        fonctionId: parseInt(formData.fonctionId),
         dateDebut: formData.dateDebut || null,
         dateFin: formData.dateFin || null,
       };
 
       if (editingId) {
-        await axios.put(`${API_CONFIG.ADMIN.EMPLOYE_FONCTIONS}/${editingId}`, payload);
+        await axios.patch(`${API_CONFIG.ADMIN.EMPLOYE_FONCTIONS}/${editingId}`, payload);
         showToast('تم تحديث الوظيفة الموكلة بنجاح', 'success');
       } else {
         await axios.post(API_CONFIG.ADMIN.EMPLOYE_FONCTIONS, payload);
@@ -163,8 +163,8 @@ const EmployeFonctionsList = () => {
               <tbody>
                 {employeeFonctions.map(ef => (
                   <tr key={ef.id}>
-                    <td>{`${ef.employePrenom} ${ef.employeNom}`}</td>
-                    <td>{ef.fonctionLabel || '-'}</td>
+                    <td>{`${ef.employe?.prenom || ''} ${ef.employe?.nom || ''}`.trim() || '-'}</td>
+                    <td>{ef.fonction?.labelAr || ef.fonction?.label_ar || ef.fonction?.name || '-'}</td>
                     <td>{formatDateDDMMYYYY(ef.dateDebut)}</td>
                     <td>{formatDateDDMMYYYY(ef.dateFin)}</td>
                     <td style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

@@ -39,7 +39,9 @@ INSERT INTO permission (`id`, `name`) VALUES
 (7, 'MANAGE_DIRECTIONS'),
 (8, 'MANAGE_ROLES'),
 (9, 'VIEW_SECURITY_LOGS'),
-(10, 'VIEW_LOGIN_HISTORY');
+(10, 'VIEW_LOGIN_HISTORY'),
+(11, 'MANAGE_DECISION'),
+(12, 'MANAGE_EMPLOYES');
 
 -- Assigner les nouvelles permissions
 INSERT INTO role_permission (role_id, permission_id) VALUES
@@ -49,11 +51,17 @@ INSERT INTO role_permission (role_id, permission_id) VALUES
 (1, 8), -- MANAGE_ROLES
 (1, 9), -- VIEW_SECURITY_LOGS
 (1, 10), -- VIEW_LOGIN_HISTORY
+(1, 11), -- MANAGE_DECISION
+(1, 12), -- MANAGE_EMPLOYES
 -- Admin Cabinet - Modération
 (2, 6), -- MANAGE_USERS
 (2, 7), -- MANAGE_DIRECTIONS
 (2, 10), -- VIEW_LOGIN_HISTORY
+(2, 11), -- MANAGE_DECISION
+(2, 12), -- MANAGE_EMPLOYES
 -- User - Rien de plus
 -- Directeur - Modération
 (4, 6), -- MANAGE_USERS
-(4, 10); -- VIEW_LOGIN_HISTORY
+(4, 10), -- VIEW_LOGIN_HISTORY
+(4, 11), -- MANAGE_DECISION
+(4, 12); -- MANAGE_EMPLOYES

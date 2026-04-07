@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
 import ModalPortal from '../common/ModalPortal';
-
-const API_BASE = 'http://localhost:9091/api';
 
 const DirectionManagement = () => {
   const [directions, setDirections] = useState([]);
@@ -22,7 +21,7 @@ const DirectionManagement = () => {
   const fetchDirections = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/admin/directions`);
+      const res = await axios.get(API_CONFIG.ADMIN.DIRECTIONS);
       let data = Array.isArray(res.data) ? res.data : res.data?.content || [];
       setDirections(data);
     } catch (err) {
@@ -67,10 +66,10 @@ const DirectionManagement = () => {
       };
 
       if (editingId) {
-        await axios.put(`${API_BASE}/admin/directions/${editingId}`, payload);
+        await axios.patch(`${API_CONFIG.ADMIN.DIRECTIONS}/${editingId}`, payload);
         showToast('تم تحديث الإدارة بنجاح', 'success');
       } else {
-        await axios.post(`${API_BASE}/admin/directions`, payload);
+        await axios.post(API_CONFIG.ADMIN.DIRECTIONS, payload);
         showToast('تم إضافة الإدارة بنجاح', 'success');
       }
       
@@ -87,7 +86,7 @@ const DirectionManagement = () => {
     if (!window.confirm('هل تريد حذف هذه الإدارة؟')) return;
     
     try {
-      await axios.delete(`${API_BASE}/admin/directions/${id}`);
+      await axios.delete(`${API_CONFIG.ADMIN.DIRECTIONS}/${id}`);
       showToast('تم حذف الإدارة بنجاح', 'success');
       fetchDirections();
     } catch (err) {

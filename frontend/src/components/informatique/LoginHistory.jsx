@@ -1,18 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
-
-const API_BASE = 'http://localhost:9091/api';
 
 const LoginHistory = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { fetchHistory(); }, []);
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const fetchHistory = async () => {
     setLoading(true);
-    try { const res = await axios.get(`${API_BASE}/admin/login-history`); setItems(res.data || []); } catch (err) { console.error(err); setItems([]); }
+    try {
+      const res = await axios.get(API_CONFIG.ACTIVITY_LOGS);
+      const filtered = (res.data || []).filter((item) => String(item.action || '').toLowerCase().includes('login'));
+      setItems(filtered);
+    } catch (err) {
+      console.error(err);
+      setItems([]);
+    }
     setLoading(false);
   };
 
@@ -22,7 +30,7 @@ const LoginHistory = () => {
       <div className="table">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#b0b0c0' }}>
-            <p>جاري التحميل...</p>
+            <p>جارٍ التحميل...</p>
           </div>
         ) : items.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#7a7a8a' }}>
@@ -33,29 +41,16 @@ const LoginHistory = () => {
             <thead>
               <tr>
                 <th>المستخدم</th>
-                <th>عنوان IP</th>
+                <th>النشاط</th>
                 <th>التاريخ والوقت</th>
-                <th>الحالة</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((it, i) => (
-                <tr key={i}>
-                  <td>{it.username || it.user || '-'}</td>
-                  <td>{it.ip || '-'}</td>
-                  <td>{it.date || it.timestamp || '-'}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: it.success ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: it.success ? '#6ee7b7' : '#fca5a5'
-                    }}>
-                      {it.success ? '✓ نجاح' : '✗ فشل'}
-                    </span>
-                  </td>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.userId || '-'}</td>
+                  <td>{item.action || '-'}</td>
+                  <td>{item.dateAction || '-'}</td>
                 </tr>
               ))}
             </tbody>

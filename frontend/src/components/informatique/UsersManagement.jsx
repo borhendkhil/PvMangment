@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit2, Trash2, UserX, UserCheck } from 'lucide-react';
 import axios from 'axios';
+import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
 import ModalPortal from '../common/ModalPortal';
-
-const API_BASE = 'http://localhost:9091/api';
 
 const UsersManagement = () => {
   const [users, setUsers] = useState([]);
@@ -18,7 +17,7 @@ const UsersManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/admin/users`);
+      const res = await axios.get(API_CONFIG.ADMIN.USERS); 
       setUsers(res.data);
     } catch (err) {
       console.error('users fetch', err);
@@ -30,7 +29,7 @@ const UsersManagement = () => {
 
   const fetchRoles = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/admin/roles`);
+      const res = await axios.get(API_CONFIG.ADMIN.ROLES);
       setRoles(res.data || []);
     } catch (err) {
       console.error('Erreur chargement roles', err);
@@ -41,7 +40,7 @@ const UsersManagement = () => {
 
   const fetchAvailableEmployes = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/admin/users/available-employes`);
+      const res = await axios.get(API_CONFIG.ADMIN.EMPLOYES);
       setEmployes(res.data || []);
     } catch (err) {
       console.error('Erreur chargement employés', err);
@@ -89,7 +88,6 @@ const UsersManagement = () => {
   const validateForm = (data) => {
     if (!editingUser) {
       // For new user: require employeId, roleId, email and password
-      if (!data.employeId) return 'الموظف مطلوب';
       if (!data.roleId) return 'الدور مطلوب';
       if (!data.email || !/^[\w-.]+@[\w-]+\.[a-zA-Z]{2,}$/.test(data.email)) return 'البريد الإلكتروني الغير صحيح';
       if (!data.password || data.password.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -118,18 +116,20 @@ const UsersManagement = () => {
     if (validation) { setError(validation); return; }
     try {
       if (editingUser) {
-        const res = await axios.put(`${API_BASE}/admin/users/${editingUser.id}`, {
+        const res = await axios.patch(`${API_CONFIG.ADMIN.USERS}/${editingUser.id}`, {
           email: formData.email,
-          password: formData.password || undefined
+          password: formData.password || undefined,
+          telephone: formData.telephone || undefined,
         });
         setError(res.data?.message || null);
         showToast('تم تحديث المستخدم', 'success');
       } else {
-        const res = await axios.post(`${API_BASE}/admin/users`, {
+        const res = await axios.post(API_CONFIG.ADMIN.USERS, {
           email: formData.email,
-          employeId: parseInt(formData.employeId),
           password: formData.password,
-          roleId: parseInt(formData.roleId)
+          telephone: formData.telephone || null,
+          enabled: true,
+          roleIds: [parseInt(formData.roleId)],
         });
         setError(res.data?.message || null);
         showToast('تم إنشاء المستخدم', 'success');
@@ -145,7 +145,7 @@ const UsersManagement = () => {
 
   const handleToggle = async (id) => {
     try {
-      await axios.put(`${API_BASE}/admin/users/${id}/toggle`);
+      await axios.patch(`${API_CONFIG.ADMIN.USERS}/${id}`, { enabled: !users.find((u) => u.id === id)?.enabled });
       fetchUsers();
       showToast('تم تغيير حالة المستخدم', 'success');
     } catch (err) {
@@ -158,7 +158,7 @@ const UsersManagement = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Confirmer la suppression ?')) return;
     try {
-      await axios.delete(`${API_BASE}/admin/users/${id}`);
+      await axios.delete(`${API_CONFIG.ADMIN.USERS}/${id}`);
       fetchUsers();
       showToast('تم حذف المستخدم', 'success');
     } catch (err) {
@@ -221,16 +221,15 @@ const UsersManagement = () => {
         <form onSubmit={handleSave}>
           {!editingUser && (
             <>
-              <label>اختر الموظف</label>
+              <label>اختر الموظف (اختياري)</label>
               <select 
-                required 
                 value={formData.employeId} 
                 onChange={(e) => setFormData({...formData, employeId: e.target.value})}
               >
                 <option value="">-- اختر موظفاً --</option>
                 {employes.length > 0 ? employes.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.nomComplet} ({emp.matricule || 'بدون رقم'})
+                    {`${emp.prenom} ${emp.nom}`} ({emp.matricule || 'بدون رقم'})
                   </option>
                 )) : (
                   <option disabled>لا توجد موظفون متاحون</option>

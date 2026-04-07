@@ -66,7 +66,7 @@ const DirectionsList = () => {
       };
 
       if (editingId) {
-        await axios.put(`${API_CONFIG.ADMIN.DIRECTIONS}/${editingId}`, payload);
+        await axios.patch(`${API_CONFIG.ADMIN.DIRECTIONS}/${editingId}`, payload);
         showToast('تم تحديث الإدارة بنجاح', 'success');
       } else {
         await axios.post(API_CONFIG.ADMIN.DIRECTIONS, payload);

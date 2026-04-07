@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Download, Eye, Search } from 'lucide-react';
 import axios from 'axios';
 import { formatDateDDMMYYYY } from '../../utils/dateFormatter';
+import API_CONFIG from '../../config/api';
 import { showToast } from '../common/Toaster';
+import usePermissions from '../../hooks/usePermissions';
 
-const API_BASE = 'http://localhost:9091/api';
+const BACKEND_BASE = API_CONFIG.BASE;
+
+const buildFileUrl = (storedPath) => {
+  if (!storedPath) return '';
+  if (/^https?:\/\//i.test(storedPath)) return storedPath;
+  return `${BACKEND_BASE}/${storedPath.replace(/^\/+/, '')}`;
+};
 
 const ListDecision = ({ sujetId, refreshTrigger }) => {
   const [decisions, setDecisions] = useState([]);
@@ -13,6 +21,7 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [pdfs, setPdfs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (sujetId) {
@@ -23,11 +32,12 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
   const fetchDecisions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/directeur/process/decisions/${sujetId}`);
-      setDecisions(res.data || []);
+      const res = await axios.get(API_CONFIG.DIRECTEUR.PROCESS.DECISIONS);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setDecisions(data.filter((decision) => String(decision.sujetId) === String(sujetId)));
     } catch (err) {
       console.error('Error fetching decisions:', err);
-      showToast('خطأ في جلب المقررات', 'error');
+      showToast('تعذر جلب المقررات', 'error');
       setDecisions([]);
     }
     setLoading(false);
@@ -36,8 +46,9 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
   const handleViewPdfs = async (decision) => {
     setSelectedDecision(decision);
     try {
-      const res = await axios.get(`${API_BASE}/directeur/process/pdfs/${decision.id}`);
-      setPdfs(res.data || []);
+      const res = await axios.get(API_CONFIG.DIRECTEUR.PROCESS.GET_PDFS());
+      const data = Array.isArray(res.data) ? res.data : [];
+      setPdfs(data.filter((pdf) => String(pdf.decisionId || pdf.decision?.id) === String(decision.id)));
     } catch (err) {
       console.error('Error fetching PDFs:', err);
       setPdfs([]);
@@ -49,37 +60,41 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!hasPermission('MANAGE_DECISION')) {
+      showToast('Permission MANAGE_DECISION refusée', 'error');
+      return;
+    }
+
     if (file.type !== 'application/pdf') {
-      showToast('يجب أن يكون الملف PDF', 'error');
+      showToast('يجب أن يكون الملف بصيغة PDF', 'error');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('files', file);
       formData.append('decisionId', selectedDecision.id);
 
-      await axios.post(`${API_BASE}/directeur/process/upload-pdf`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await axios.post(API_CONFIG.DIRECTEUR.PROCESS.UPLOAD_PDF(selectedDecision.id), formData);
 
       showToast('تم رفع الملف بنجاح', 'success');
-      const res = await axios.get(`${API_BASE}/directeur/process/pdfs/${selectedDecision.id}`);
-      setPdfs(res.data || []);
+      const res = await axios.get(API_CONFIG.DIRECTEUR.PROCESS.GET_PDFS());
+      const data = Array.isArray(res.data) ? res.data : [];
+      setPdfs(data.filter((pdf) => String(pdf.decisionId || pdf.decision?.id) === String(selectedDecision.id)));
     } catch (err) {
       console.error('Error uploading PDF:', err);
-      showToast('خطأ في رفع الملف', 'error');
+      showToast('تعذر رفع الملف', 'error');
     }
   };
 
   const handleDeletePdf = async (pdfId) => {
     if (window.confirm('هل تريد حذف هذا الملف؟')) {
       try {
-        await axios.delete(`${API_BASE}/directeur/process/pdfs/${pdfId}`);
-        showToast('تم حذف الملف بنجاح', 'success');
+        await axios.delete(API_CONFIG.DIRECTEUR.PROCESS.DELETE_PDF(pdfId));
+      showToast('تم حذف الملف بنجاح', 'success');
         setPdfs(pdfs.filter(p => p.id !== pdfId));
       } catch (err) {
-        showToast('خطأ في حذف الملف', 'error');
+      showToast('تعذر حذف الملف', 'error');
       }
     }
   };
@@ -87,24 +102,24 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
   const handleDelete = async (decisionId) => {
     if (window.confirm('هل تريد حذف هذا المقرر؟')) {
       try {
-        await axios.delete(`${API_BASE}/directeur/process/decisions/${decisionId}`);
-        showToast('تم حذف المقرر بنجاح', 'success');
+        await axios.delete(API_CONFIG.DIRECTEUR.PROCESS.DELETE_DECISION(decisionId));
+      showToast('تم حذف القرار بنجاح', 'success');
         fetchDecisions();
       } catch (err) {
-        showToast('خطأ في حذف المقرر', 'error');
+      showToast('تعذر حذف القرار', 'error');
       }
     }
   };
 
   const downloadPdf = (pdfUrl, fileName) => {
     const link = document.createElement('a');
-    link.href = pdfUrl;
+    link.href = buildFileUrl(pdfUrl);
     link.download = fileName;
     link.click();
   };
 
   if (loading) {
-    return <div className="decision-loading">جاري التحميل...</div>;
+    return <div className="decision-loading">جارٍ التحميل...</div>;
   }
 
   if (decisions.length === 0) {
@@ -112,8 +127,8 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
   }
 
   const filteredDecisions = decisions.filter(decision =>
-    decision.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (decision.description && decision.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    (decision.fichierName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (decision.sujetNom || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -139,8 +154,8 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
           <thead>
             <tr>
               <th>#</th>
-              <th>العنوان</th>
-              <th>الوصف</th>
+              <th>الملف</th>
+              <th>الحالة</th>
               <th>التاريخ</th>
               <th>الملفات</th>
               <th style={{ width: '200px' }}>الإجراءات</th>
@@ -150,8 +165,8 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
             {filteredDecisions.map((decision, index) => (
               <tr key={decision.id}>
                 <td>{index + 1}</td>
-                <td>{decision.titre}</td>
-                <td>{decision.description || '-'}</td>
+                <td>{decision.fichierName || `قرار #${decision.id}`}</td>
+                <td>{(decision.statut || 'inactive') === 'active' ? 'نشطة' : 'غير نشطة'}</td>
                 <td>{formatDateDDMMYYYY(decision.dateCreation)}</td>
                 <td style={{ textAlign: 'center' }}>
                   <button 
@@ -193,18 +208,18 @@ const ListDecision = ({ sujetId, refreshTrigger }) => {
       {showPdfModal && (
         <div className="decision-modal" onClick={() => setShowPdfModal(false)}>
           <div className="decision-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>ملفات المقرر: {selectedDecision?.titre}</h3>
+            <h3>ملفات القرار: {selectedDecision?.fichierName || `#${selectedDecision?.id || ''}`}</h3>
 
             {pdfs.length > 0 ? (
               <div className="decision-pdfs-list">
                 {pdfs.map(pdf => (
                   <div key={pdf.id} className="decision-pdf-item">
                     <div>
-                      <p style={{ margin: '0 0 4px 0', fontWeight: '500' }}>{pdf.fileName}</p>
-                      <small style={{ color: '#b0b0c0' }}>{formatDateDDMMYYYY(pdf.dateCreation)}</small>
+                      <p style={{ margin: '0 0 4px 0', fontWeight: '500' }}>{pdf.pdfName}</p>
+                      <small style={{ color: '#b0b0c0' }}>{formatDateDDMMYYYY(pdf.dateUpload)}</small>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="btn-pdf-download" onClick={() => downloadPdf(pdf.filePath, pdf.fileName)} title="تحميل">
+                      <button className="btn-pdf-download" onClick={() => downloadPdf(pdf.pdfPath, pdf.pdfName)} title="تحميل">
                         <Download size={14} />
                         تحميل
                       </button>

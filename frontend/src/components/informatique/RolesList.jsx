@@ -31,16 +31,16 @@ const RolesList = () => {
   };
 
   const openAdd = () => { setEditing(null); setName(''); setNameAr(''); setError(null); setShowModal(true); };
-  const openEdit = (r) => { setEditing(r); setName(r.role || ''); setNameAr(r.roleAr || r.role_ar || ''); setError(null); setShowModal(true); };
+  const openEdit = (r) => { setEditing(r); setName(r.name || ''); setNameAr(r.labelAr || r.label_ar || ''); setError(null); setShowModal(true); };
 
   const save = async (e) => {
     e.preventDefault();
     if (!name || name.trim().length < 2) { setError('Nom invalide'); return; }
     try {
       if (editing) {
-        await axios.put(`${API_CONFIG.ADMIN.ROLES}/${editing.id}`, { role: name, roleAr: nameAr });
+        await axios.patch(`${API_CONFIG.ADMIN.ROLES}/${editing.id}`, { name, label_ar: nameAr });
       } else {
-        await axios.post(API_CONFIG.ADMIN.ROLES, { role: name, roleAr: nameAr });
+        await axios.post(API_CONFIG.ADMIN.ROLES, { name, label_ar: nameAr });
       }
       setShowModal(false);
       fetchRoles();
@@ -90,8 +90,8 @@ const RolesList = () => {
               <tbody>
                 {roles.map(r => (
                   <tr key={r.id}>
-                    <td>{r.role}</td>
-                    <td>{r.roleAr || r.role_ar}</td>
+                    <td>{r.name}</td>
+                    <td>{r.labelAr || r.label_ar}</td>
                     <td style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button className="icon-btn" onClick={() => openEdit(r)} title="تعديل"><Edit2 size={16} /></button>
                       <button className="icon-btn" onClick={() => remove(r.id)} title="حذف"><Trash2 size={16} /></button>

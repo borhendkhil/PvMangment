@@ -33,7 +33,7 @@ const RolePermissionsList = () => {
   const fetchRolePermissions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(API_CONFIG.ADMIN.ROLE_PERMISSIONS);
+      const res = await axios.get(API_CONFIG.ADMIN.ROLES);
       setRolePermissions(res.data || []);
     } catch (err) {
       console.error('Erreur:', err);
@@ -51,10 +51,10 @@ const RolePermissionsList = () => {
   };
 
   const handleEdit = (rolePermission) => {
-    setEditingRoleId(rolePermission.roleId);
+    setEditingRoleId(rolePermission.id);
     setFormData({
-      roleId: rolePermission.roleId,
-      selectedPermissions: rolePermission.permissionIds || [],
+      roleId: rolePermission.id,
+      selectedPermissions: (rolePermission.permissions || []).map((permission) => permission.id),
     });
     setError(null);
     setShowModal(true);
@@ -70,17 +70,11 @@ const RolePermissionsList = () => {
 
     try {
       const payload = {
-        roleId: parseInt(formData.roleId),
         permissionIds: formData.selectedPermissions,
       };
 
-      if (editingRoleId) {
-        await axios.put(`${API_CONFIG.ADMIN.ROLE_PERMISSIONS}/${editingRoleId}`, payload);
-        showToast('تم تحديث صلاحيات الدور بنجاح', 'success');
-      } else {
-        await axios.post(API_CONFIG.ADMIN.ROLE_PERMISSIONS, payload);
-        showToast('تم إضافة صلاحيات الدور بنجاح', 'success');
-      }
+      await axios.put(`${API_CONFIG.ADMIN.ROLES}/${formData.roleId}/permissions`, payload);
+      showToast(editingRoleId ? 'تم تحديث صلاحيات الدور بنجاح' : 'تم إضافة صلاحيات الدور بنجاح', 'success');
 
       setShowModal(false);
       fetchRolePermissions();
@@ -95,7 +89,7 @@ const RolePermissionsList = () => {
     if (!window.confirm('هل تريد حذف جميع صلاحيات هذا الدور؟')) return;
 
     try {
-      await axios.delete(`${API_CONFIG.ADMIN.ROLE_PERMISSIONS}/${roleId}`);
+      await axios.put(`${API_CONFIG.ADMIN.ROLES}/${roleId}/permissions`, { permissionIds: [] });
       showToast('تم حذف الصلاحيات بنجاح', 'success');
       fetchRolePermissions();
     } catch (err) {
@@ -133,8 +127,8 @@ const RolePermissionsList = () => {
               <tbody>
                 {rolePermissions.map(rp => (
                   <tr key={rp.roleId}>
-                    <td>{rp.roleLabelAr || rp.roleName}</td>
-                    <td>{rp.permissionNames?.join(', ') || '-'}</td>
+                  <td>{rp.labelAr || rp.label_ar || rp.name}</td>
+                  <td>{(rp.permissions || []).map((permission) => permission.name).join(', ') || '-'}</td>
                     <td style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button
                         onClick={() => handleEdit(rp)}
@@ -170,8 +164,8 @@ const RolePermissionsList = () => {
             >
               <option value="">اختر الدور</option>
               {rolePermissions.map(rp => (
-                <option key={rp.roleId} value={rp.roleId}>
-                  {rp.roleLabelAr || rp.roleName}
+                <option key={rp.id} value={rp.id}>
+                  {rp.labelAr || rp.label_ar || rp.name}
                 </option>
               ))}
             </select>

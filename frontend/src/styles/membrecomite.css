@@ -415,3 +415,146 @@
 .membre-content::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+
+/* Embedded (inside CommitteeTabbedModal) */
+.membre-comite-embedded .membre-content {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(105, 192, 226, 0.14);
+    border-radius: 18px;
+    box-shadow: none;
+    color: #fff;
+}
+
+.membre-comite-embedded .add-membre-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(105, 192, 226, 0.14);
+}
+
+.membre-comite-embedded .membres-list-section h3 {
+    color: #dff7ff;
+}
+
+.membre-comite-embedded .form-group label {
+    color: #b0b0c0;
+}
+
+.membre-comite-embedded .form-group input,
+.membre-comite-embedded .form-group select,
+.membre-comite-embedded .edit-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.membre-comite-embedded .form-group input:focus,
+.membre-comite-embedded .form-group select:focus,
+.membre-comite-embedded .edit-input:focus {
+    border-color: rgba(105, 192, 226, 0.45);
+    box-shadow: 0 0 0 3px rgba(105, 192, 226, 0.12);
+}
+
+.membre-comite-embedded .form-group input:disabled,
+.membre-comite-embedded .form-group select:disabled {
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.membre-comite-embedded .form-group select option,
+.membre-comite-embedded .edit-input option {
+    background: #10153a;
+    color: #fff;
+}
+
+.membre-comite-embedded .btn-primary,
+.membre-comite-embedded .btn-success {
+    background: linear-gradient(135deg, #1a472a, #0d2818);
+    color: #fff;
+    border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+.membre-comite-embedded .btn-primary:hover:not(:disabled),
+.membre-comite-embedded .btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #205836, #12351f);
+    box-shadow: 0 8px 24px rgba(20, 83, 45, 0.35);
+}
+
+.membre-comite-embedded .btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.membre-comite-embedded .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.membre-comite-embedded .empty-message {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(105, 192, 226, 0.22);
+    color: #b0b0c0;
+}
+
+.membre-comite-embedded .membres-table thead {
+    background: rgba(105, 192, 226, 0.12);
+    border-bottom: 1px solid rgba(105, 192, 226, 0.18);
+}
+
+.membre-comite-embedded .membres-table th {
+    color: #dff7ff;
+}
+
+.membre-comite-embedded .membres-table td {
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.membre-comite-embedded .membres-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.membre-comite-embedded .membres-table tbody tr.editing {
+    background: rgba(105, 192, 226, 0.12);
+}
+
+.membre-comite-embedded .btn-action {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.membre-comite-embedded .btn-edit {
+    color: #dff7ff;
+    border-color: rgba(105, 192, 226, 0.3);
+}
+
+.membre-comite-embedded .btn-edit:hover:not(:disabled) {
+    background: rgba(105, 192, 226, 0.14);
+    border-color: rgba(105, 192, 226, 0.45);
+}
+
+.membre-comite-embedded .btn-save {
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.28);
+}
+
+.membre-comite-embedded .btn-save:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.14);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.membre-comite-embedded .btn-cancel {
+    color: #d1d5db;
+}
+
+.membre-comite-embedded .btn-cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.membre-comite-embedded .btn-delete {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.24);
+}
+
+.membre-comite-embedded .btn-delete:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.4);
+}

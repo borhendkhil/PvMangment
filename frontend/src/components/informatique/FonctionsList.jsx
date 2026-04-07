@@ -75,10 +75,10 @@ const FonctionsList = () => {
       };
 
       if (editingFonction) {
-        await axios.put(`${API_CONFIG.ADMIN.FONCTIONS}/${editingFonction.id}`, payload, { headers });
+        await axios.patch(`${API_CONFIG.ADMIN.FONCTIONS}/${editingFonction.id}`, { name: payload.name, label_ar: payload.labelAr }, { headers });
         showToast('تم تحديث الوظيفة', 'success');
       } else {
-        await axios.post(API_CONFIG.ADMIN.FONCTIONS, payload, { headers });
+        await axios.post(API_CONFIG.ADMIN.FONCTIONS, { name: payload.name, label_ar: payload.labelAr }, { headers });
         showToast('تم إضافة الوظيفة', 'success');
       }
       

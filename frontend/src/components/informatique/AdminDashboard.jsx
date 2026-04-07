@@ -15,16 +15,13 @@ import FonctionsList from './FonctionsList';
 import SecurityLogs from './SecurityLogs';
 import LoginHistory from './LoginHistory';
 import AccessManagement from './AccessManagement';
-import axios from 'axios';
-import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
 
-import Toaster, { showToast } from '../common/Toaster';
+import Toaster from '../common/Toaster';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [nomPrenom, setNomPrenom] = useState('');
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openGroups, setOpenGroups] = useState({ dashboard: true, users: true, security: true, gestion: true });
 
@@ -36,21 +33,8 @@ const AdminDashboard = () => {
     } else {
       setNomPrenom('مستخدم');
     }
-    fetchStats();
+    setLoading(false);
   }, []);
-
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(API_CONFIG.ADMIN.STATS);
-      setStats(res.data);
-    } catch (error) {
-      console.error('Erreur chargement stats:', error);
-      showToast('Erreur lors du chargement des données', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleGroup = (groupKey) => {
     setOpenGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
