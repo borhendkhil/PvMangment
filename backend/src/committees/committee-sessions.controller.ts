@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -9,6 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { RequestUser } from '../common/interfaces/request-user.interface';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import {
@@ -31,6 +32,25 @@ export class CommitteeSessionsController {
   @ApiOperation({ summary: 'List committee sessions' })
   findAll() {
     return this.committeeSessionsService.findAll();
+  }
+
+  @Get('assigned/me')
+  @ApiOkResponse({ type: [CommitteeSessionResponseDto] })
+  @ApiOperation({ summary: 'List committee sessions assigned to authenticated member' })
+  findAssignedSessions(@Req() request: { user: RequestUser }) {
+    return this.committeeSessionsService.findAssignedToUser(request.user.id);
+  }
+
+  @Patch('assigned/:id/report')
+  @ApiBody({ type: UpdateCommitteeSessionDto })
+  @ApiOkResponse({ type: CommitteeSessionResponseDto })
+  @ApiOperation({ summary: 'Update report fields for assigned session (rapporteur only)' })
+  updateAssignedReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: { user: RequestUser },
+    @Body() dto: UpdateCommitteeSessionDto,
+  ) {
+    return this.committeeSessionsService.updateAssignedReport(request.user.id, id, dto);
   }
 
   @Get(':id')

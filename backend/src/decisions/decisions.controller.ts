@@ -13,7 +13,12 @@ import { Permissions } from '../common/decorators/permissions.decorator';
 import { RequestUser } from '../common/interfaces/request-user.interface';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { CreateDecisionDto, DecisionResponseDto, UpdateDecisionDto } from './dto/decision.dto';
+import {
+  CreateDecisionDto,
+  DecisionResponseDto,
+  UpdateDecisionAssignedReportDto,
+  UpdateDecisionDto,
+} from './dto/decision.dto';
 import { DecisionsService } from './decisions.service';
 
 @ApiTags('Decisions')
@@ -36,6 +41,18 @@ export class DecisionsController {
   @ApiOperation({ summary: 'List decisions assigned to the authenticated committee member' })
   findMyAssignedDecisions(@Req() request: { user: RequestUser }) {
     return this.decisionsService.findAssignedToUser(request.user.id);
+  }
+
+  @Patch('assigned/:id/report')
+  @ApiBody({ type: UpdateDecisionAssignedReportDto })
+  @ApiOkResponse({ type: DecisionResponseDto })
+  @ApiOperation({ summary: 'Update assigned decision report row (rapporteur only)' })
+  updateAssignedDecisionReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: { user: RequestUser },
+    @Body() dto: UpdateDecisionAssignedReportDto,
+  ) {
+    return this.decisionsService.updateAssignedReportRow(request.user.id, id, dto);
   }
 
   @Get('current/session/:sessionId')

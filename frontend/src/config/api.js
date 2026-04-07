@@ -91,6 +91,9 @@ export const API_CONFIG = {
 
   COMITE: {
     ASSIGNED_DECISIONS: withRoot('/decisions/assigned/me'),
+    ASSIGNED_SESSIONS: withRoot('/committee-sessions/assigned/me'),
+    UPDATE_ASSIGNED_SESSION_REPORT: (sessionId) => withRoot(`/committee-sessions/assigned/${sessionId}/report`),
+    UPDATE_ASSIGNED_DECISION_REPORT: (decisionId) => withRoot(`/decisions/assigned/${decisionId}/report`),
   },
 };
 

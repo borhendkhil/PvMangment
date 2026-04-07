@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { basename } from 'path';
@@ -8,7 +8,7 @@ import { DecisionEntity } from '../database/entities/decision.entity';
 import { DecisionPdfEntity } from '../database/entities/decision-pdf.entity';
 import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
 import { UserEntity } from '../database/entities/user.entity';
-import { CreateDecisionDto, UpdateDecisionDto } from './dto/decision.dto';
+import { CreateDecisionDto, UpdateDecisionAssignedReportDto, UpdateDecisionDto } from './dto/decision.dto';
 import { CreateDecisionPdfDto, UpdateDecisionPdfDto } from './dto/decision-pdf.dto';
 
 import { CommitteeEntity } from '../database/entities/comite.entity';
@@ -131,6 +131,9 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         numAdmin: dto.numAdmin ?? null,
         titre: dto.titre ?? null,
         description: dto.description ?? null,
+        recommendationText: dto.recommendationText ?? null,
+        executionStructure: dto.executionStructure ?? null,
+        deadlineText: dto.deadlineText ?? null,
         fichierPath: dto.fichierPath ?? null,
         fichierName: dto.fichierName ?? null,
         statut: dto.statut ?? null,
@@ -180,6 +183,9 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     if (dto.numAdmin !== undefined) decision.numAdmin = dto.numAdmin ?? null;
     if (dto.titre !== undefined) decision.titre = dto.titre ?? null;
     if (dto.description !== undefined) decision.description = dto.description ?? null;
+    if (dto.recommendationText !== undefined) decision.recommendationText = dto.recommendationText ?? null;
+    if (dto.executionStructure !== undefined) decision.executionStructure = dto.executionStructure ?? null;
+    if (dto.deadlineText !== undefined) decision.deadlineText = dto.deadlineText ?? null;
     if (dto.fichierPath !== undefined) decision.fichierPath = dto.fichierPath ?? null;
     if (dto.fichierName !== undefined) decision.fichierName = dto.fichierName ?? null;
     if (dto.statut !== undefined) decision.statut = dto.statut ?? null;
@@ -187,6 +193,62 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     if (dto.dateUpload !== undefined) {
       decision.dateUpload = dto.dateUpload ? new Date(dto.dateUpload) : null;
     }
+    const saved = await this.repository.save(decision);
+    return this.findOne(saved.id);
+  }
+
+  async updateAssignedReportRow(userId: number, decisionId: number, dto: UpdateDecisionAssignedReportDto) {
+    const decision = await this.repository.findOne({
+      where: { id: decisionId },
+      relations: {
+        comite: true,
+        session: { comite: true },
+      },
+    });
+
+    if (!decision) {
+      throw new NotFoundException(`Decision #${decisionId} not found`);
+    }
+
+    const committeeId = decision.comite?.id || decision.session?.comite?.id;
+    if (!committeeId) {
+      throw new ForbiddenException('This decision is not linked to a committee session');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: {
+        employe: {
+          memberComites: {
+            roleComite: true,
+            comite: true,
+          },
+        },
+      },
+    });
+
+    const memberships = user?.employe?.memberComites ?? [];
+    const membership = memberships.find((member) => (member.comiteId || member.comite?.id) === committeeId);
+    if (!membership) {
+      throw new ForbiddenException('Decision not assigned to your committee');
+    }
+
+    const roleName = `${membership.roleComite?.labelAr || ''} ${membership.roleComite?.name || ''}`.toLowerCase();
+    const canEditReport = roleName.includes('مقرر') || roleName.includes('rapporteur') || roleName.includes('reporter');
+    if (!canEditReport) {
+      throw new ForbiddenException('Only rapporteur can edit session report rows');
+    }
+
+    if (dto.recommendationText !== undefined) {
+      decision.recommendationText = dto.recommendationText ?? null;
+    }
+    if (dto.executionStructure !== undefined) {
+      decision.executionStructure = dto.executionStructure ?? null;
+    }
+    if (dto.deadlineText !== undefined) {
+      decision.deadlineText = dto.deadlineText ?? null;
+    }
+
     const saved = await this.repository.save(decision);
     return this.findOne(saved.id);
   }

@@ -5,6 +5,7 @@ import { CommitteeSessionEntity } from '../database/entities/committee-session.e
 import { EmployeEntity } from '../database/entities/employe.entity';
 import { MemberComiteEntity } from '../database/entities/member-comite.entity';
 import { RoleComiteEntity } from '../database/entities/role-comite.entity';
+import { UserEntity } from '../database/entities/user.entity';
 import { CommitteesController } from './committees.controller';
 import { CommitteesService } from './committees.service';
 import { CommitteeSessionsController } from './committee-sessions.controller';
@@ -22,6 +23,7 @@ import { RoleComiteService } from './role-comite.service';
       MemberComiteEntity,
       RoleComiteEntity,
       EmployeEntity,
+      UserEntity,
     ]),
   ],
   controllers: [

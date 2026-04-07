@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BaseCrudService } from '../common/services/base-crud.service';
 import { CommitteeEntity } from '../database/entities/comite.entity';
 import { CommitteeSessionEntity } from '../database/entities/committee-session.entity';
+import { UserEntity } from '../database/entities/user.entity';
 import { CreateCommitteeSessionDto, UpdateCommitteeSessionDto } from './dto/committee-session.dto';
 
 @Injectable()
@@ -13,6 +14,8 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
     repository: Repository<CommitteeSessionEntity>,
     @InjectRepository(CommitteeEntity)
     private readonly committeeRepository: Repository<CommitteeEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {
     super(repository);
   }
@@ -43,6 +46,10 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
         dateSession: dto.dateSession ? new Date(dto.dateSession) : null,
         lieu: dto.lieu ?? null,
         statut: dto.statut ?? null,
+        reportTopic: dto.reportTopic ?? null,
+        reportContext: dto.reportContext ?? null,
+        reportDiscussion: dto.reportDiscussion ?? null,
+        reportRowsJson: dto.reportRowsJson ?? null,
       }),
     );
   }
@@ -63,6 +70,69 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
     }
     if (dto.lieu !== undefined) session.lieu = dto.lieu ?? null;
     if (dto.statut !== undefined) session.statut = dto.statut ?? null;
+    if (dto.reportTopic !== undefined) session.reportTopic = dto.reportTopic ?? null;
+    if (dto.reportContext !== undefined) session.reportContext = dto.reportContext ?? null;
+    if (dto.reportDiscussion !== undefined) session.reportDiscussion = dto.reportDiscussion ?? null;
+    if (dto.reportRowsJson !== undefined) session.reportRowsJson = dto.reportRowsJson ?? null;
+    return this.repository.save(session);
+  }
+
+  async findAssignedToUser(userId: number) {
+    return this.repository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.comite', 'comite')
+      .leftJoinAndSelect('session.decisions', 'decisions')
+      .leftJoin('comite.members', 'members')
+      .leftJoin('members.employe', 'employe')
+      .leftJoin('employe.user', 'user')
+      .where('user.id = :userId', { userId })
+      .orderBy('session.id', 'DESC')
+      .getMany();
+  }
+
+  async updateAssignedReport(userId: number, sessionId: number, dto: UpdateCommitteeSessionDto) {
+    const session = await this.repository.findOne({
+      where: { id: sessionId },
+      relations: {
+        comite: true,
+      },
+    });
+    if (!session) {
+      throw new NotFoundException(`Committee session #${sessionId} not found`);
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: {
+        employe: {
+          memberComites: {
+            roleComite: true,
+            comite: true,
+          },
+        },
+      },
+    });
+
+    const memberships = user?.employe?.memberComites ?? [];
+    const membership = memberships.find(
+      (member) => (member.comiteId || member.comite?.id) === session.comite?.id,
+    );
+
+    if (!membership) {
+      throw new ForbiddenException('Session not assigned to your committee');
+    }
+
+    const roleName = `${membership.roleComite?.labelAr || ''} ${membership.roleComite?.name || ''}`.toLowerCase();
+    const canEditReport = roleName.includes('مقرر') || roleName.includes('rapporteur') || roleName.includes('reporter');
+    if (!canEditReport) {
+      throw new ForbiddenException('Only rapporteur can edit session report');
+    }
+
+    if (dto.reportTopic !== undefined) session.reportTopic = dto.reportTopic ?? null;
+    if (dto.reportContext !== undefined) session.reportContext = dto.reportContext ?? null;
+    if (dto.reportDiscussion !== undefined) session.reportDiscussion = dto.reportDiscussion ?? null;
+    if (dto.reportRowsJson !== undefined) session.reportRowsJson = dto.reportRowsJson ?? null;
+
     return this.repository.save(session);
   }
 }

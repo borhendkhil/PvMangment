@@ -40,6 +40,15 @@ export class DecisionEntity {
   @Column({ name: 'description', type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ name: 'recommendation_text', type: 'text', nullable: true })
+  recommendationText: string | null;
+
+  @Column({ name: 'execution_structure', type: 'varchar', length: 255, nullable: true })
+  executionStructure: string | null;
+
+  @Column({ name: 'deadline_text', type: 'varchar', length: 255, nullable: true })
+  deadlineText: string | null;
+
   @Column({ name: 'fichier_path', type: 'varchar', length: 255, nullable: true })
   fichierPath: string | null;
 

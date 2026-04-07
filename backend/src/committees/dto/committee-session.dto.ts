@@ -23,6 +23,27 @@ export class CreateCommitteeSessionDto {
   @IsString()
   @MaxLength(50)
   statut?: string | null;
+
+  @ApiPropertyOptional({ example: 'متابعة تنفيذ القرارات', nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  reportTopic?: string | null;
+
+  @ApiPropertyOptional({ example: 'بيان الإطار العام للجلسة', nullable: true })
+  @IsOptional()
+  @IsString()
+  reportContext?: string | null;
+
+  @ApiPropertyOptional({ example: 'أهم ما تم تداوله خلال الجلسة', nullable: true })
+  @IsOptional()
+  @IsString()
+  reportDiscussion?: string | null;
+
+  @ApiPropertyOptional({ example: '[{\"recommendationText\":\"...\"}]', nullable: true })
+  @IsOptional()
+  @IsString()
+  reportRowsJson?: string | null;
 }
 
 export class UpdateCommitteeSessionDto extends PartialType(CreateCommitteeSessionDto) {}
@@ -42,4 +63,16 @@ export class CommitteeSessionResponseDto {
 
   @ApiPropertyOptional({ nullable: true, example: 'planned' })
   statut?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'متابعة تنفيذ القرارات' })
+  reportTopic?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'بيان الإطار العام للجلسة' })
+  reportContext?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'أهم ما تم تداوله خلال الجلسة' })
+  reportDiscussion?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: '[{\"recommendationText\":\"...\"}]' })
+  reportRowsJson?: string | null;
 }
