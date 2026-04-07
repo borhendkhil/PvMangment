@@ -6,6 +6,7 @@ import './lib/httpClient'
 import Login from './components/Login'
 import AdminDashboard from './components/informatique/AdminDashboard'
 import AcceuilDashboard from './components/directeur/AcceuilDashboard'
+import RapporteurDashboard from './components/comite/RapporteurDashboard'
 import AdminCabinetDashboard from './components/admin-cabinet/Dashboard'
 import UserDashboard from './components/user/Dashboard'
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/informatique/dashbord" element={<AdminDashboard />} />
         <Route path="/directeur/acceuildashboard" element={<AcceuilDashboard />} />
+        <Route path="/comite/rapporteur/dashboard" element={<RapporteurDashboard />} />
         <Route path="/admin-cabinet/dashboard" element={<AdminCabinetDashboard />} />
         <Route path="/user/dashboard" element={<UserDashboard />} />
         <Route path="/dashboard" element={<UserDashboard />} />

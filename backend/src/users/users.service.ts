@@ -60,7 +60,10 @@ export class UsersService extends BaseCrudService<UserEntity> {
   async findByEmail(email: string) {
     return this.repository.findOne({
       where: { email },
-      relations: { roles: { permissions: true }, employe: true },
+      relations: {
+        roles: { permissions: true },
+        employe: { memberComites: { roleComite: true } },
+      },
     });
   }
 

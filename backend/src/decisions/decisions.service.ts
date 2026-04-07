@@ -7,6 +7,7 @@ import { CommitteeSessionEntity } from '../database/entities/committee-session.e
 import { DecisionEntity } from '../database/entities/decision.entity';
 import { DecisionPdfEntity } from '../database/entities/decision-pdf.entity';
 import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
+import { UserEntity } from '../database/entities/user.entity';
 import { CreateDecisionDto, UpdateDecisionDto } from './dto/decision.dto';
 import { CreateDecisionPdfDto, UpdateDecisionPdfDto } from './dto/decision-pdf.dto';
 
@@ -25,6 +26,8 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     private readonly decisionPdfRepository: Repository<DecisionPdfEntity>,
     @InjectRepository(CommitteeEntity)
     private readonly comiteRepository: Repository<CommitteeEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {
     super(repository);
   }
@@ -34,6 +37,44 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
       relations: { subject: true, session: { comite: true }, decisionPdfs: true, comite: true },
       order: { id: 'DESC' },
     });
+  }
+
+  async findAssignedToUser(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: {
+        employe: {
+          memberComites: {
+            comite: true,
+          },
+        },
+      },
+    });
+
+    const committeeIds = Array.from(
+      new Set(
+        (user?.employe?.memberComites ?? [])
+          .map((membership) => membership.comiteId || membership.comite?.id)
+          .filter((id): id is number => Number.isInteger(id) && id > 0),
+      ),
+    );
+
+    if (!committeeIds.length) {
+      return [];
+    }
+
+    return this.repository
+      .createQueryBuilder('decision')
+      .leftJoinAndSelect('decision.subject', 'subject')
+      .leftJoinAndSelect('decision.session', 'session')
+      .leftJoinAndSelect('session.comite', 'sessionComite')
+      .leftJoinAndSelect('decision.decisionPdfs', 'decisionPdfs')
+      .leftJoinAndSelect('decision.comite', 'decisionComite')
+      .where('decisionComite.id IN (:...committeeIds)', { committeeIds })
+      .orWhere('sessionComite.id IN (:...committeeIds)', { committeeIds })
+      .distinct(true)
+      .orderBy('decision.id', 'DESC')
+      .getMany();
   }
 
   override async findOne(id: number) {

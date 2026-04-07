@@ -13,6 +13,7 @@ export class AuthResponseDto {
       email: 'admin@example.com',
       roles: ['admin_informatique'],
       permissions: ['MANAGE_USERS'],
+      committeeRoles: ['مقرر'],
     },
   })
   user: {
@@ -20,5 +21,6 @@ export class AuthResponseDto {
     email: string;
     roles: string[];
     permissions: string[];
+    committeeRoles?: string[];
   };
 }

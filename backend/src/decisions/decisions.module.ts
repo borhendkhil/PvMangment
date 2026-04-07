@@ -5,6 +5,7 @@ import { CommitteeEntity } from '../database/entities/comite.entity';
 import { DecisionEntity } from '../database/entities/decision.entity';
 import { DecisionPdfEntity } from '../database/entities/decision-pdf.entity';
 import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
+import { UserEntity } from '../database/entities/user.entity';
 import { DecisionsController } from './decisions.controller';
 import { DecisionPdfsController } from './decision-pdfs.controller';
 import { DecisionsService } from './decisions.service';
@@ -19,6 +20,7 @@ import { SubjectsService } from './subjects.service';
       SubjectDecisionEntity,
       CommitteeSessionEntity,
       CommitteeEntity,
+      UserEntity,
     ]),
   ],
   controllers: [DecisionsController, DecisionPdfsController, SubjectsController],

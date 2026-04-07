@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -10,6 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { RequestUser } from '../common/interfaces/request-user.interface';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { CreateDecisionDto, DecisionResponseDto, UpdateDecisionDto } from './dto/decision.dto';
@@ -28,6 +29,13 @@ export class DecisionsController {
   @ApiOperation({ summary: 'List decisions' })
   findAll() {
     return this.decisionsService.findAll();
+  }
+
+  @Get('assigned/me')
+  @ApiOkResponse({ type: [DecisionResponseDto] })
+  @ApiOperation({ summary: 'List decisions assigned to the authenticated committee member' })
+  findMyAssignedDecisions(@Req() request: { user: RequestUser }) {
+    return this.decisionsService.findAssignedToUser(request.user.id);
   }
 
   @Get('current/session/:sessionId')

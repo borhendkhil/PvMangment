@@ -88,6 +88,10 @@ export const API_CONFIG = {
     PROFILE: withRoot('/users/me'),
     DASHBOARD: withRoot('/users/dashboard'),
   },
+
+  COMITE: {
+    ASSIGNED_DECISIONS: withRoot('/decisions/assigned/me'),
+  },
 };
 
 export default API_CONFIG;

@@ -13,6 +13,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const reporterRoles = ['مقرر', 'rapporteur', 'rapporteur_comite', 'reporter_comite'];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -27,8 +28,15 @@ const Login = () => {
 
             const { accessToken, user } = response.data || {};
             const roles = Array.isArray(user?.roles) ? user.roles : [];
+            const committeeRoles = Array.isArray(user?.committeeRoles) ? user.committeeRoles : [];
             const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
             const primaryRole = roles[0] || '';
+            const normalizedAppRoles = roles.map((r) => String(r || '').toLowerCase());
+            const normalizedCommitteeRoles = committeeRoles.map((r) => String(r || '').toLowerCase());
+            const isRapporteur = reporterRoles.some((roleName) =>
+                normalizedAppRoles.includes(roleName.toLowerCase()) ||
+                normalizedCommitteeRoles.includes(roleName.toLowerCase())
+            );
 
             localStorage.setItem('token', accessToken || '');
             localStorage.setItem('permissions', JSON.stringify(permissions));
@@ -42,6 +50,9 @@ const Login = () => {
             } else if (primaryRole === 'admin_cabinet') {
                 // Admin Cabinet
                 navigate('/admin-cabinet/dashboard');
+            } else if (isRapporteur) {
+                // Committee Rapporteur
+                navigate('/comite/rapporteur/dashboard');
             } else if (primaryRole === 'user') {
                 // User/Member
                 navigate('/dashboard');

@@ -26,10 +26,18 @@ export class AuthService {
 
     const permissions = new Set<string>();
     const roles = user.roles?.map((role) => role.name) ?? [];
+    const committeeRoles = new Set<string>();
 
     for (const role of user.roles ?? []) {
       for (const permission of role.permissions ?? []) {
         permissions.add(permission.name);
+      }
+    }
+
+    for (const membership of user.employe?.memberComites ?? []) {
+      const committeeRole = membership.roleComite?.labelAr || membership.roleComite?.name;
+      if (committeeRole) {
+        committeeRoles.add(committeeRole);
       }
     }
 
@@ -38,6 +46,7 @@ export class AuthService {
       email: user.email,
       roles,
       permissions: [...permissions],
+      committeeRoles: [...committeeRoles],
     };
 
     return {
@@ -50,6 +59,7 @@ export class AuthService {
         email: user.email,
         roles,
         permissions: [...permissions],
+        committeeRoles: [...committeeRoles],
       },
     };
   }
