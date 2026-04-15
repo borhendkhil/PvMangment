@@ -7,7 +7,20 @@ import {
   FolderOpen,
   LayoutDashboard,
   LogOut,
+  Users,
+  AlertTriangle,
+  Activity,
+  Award,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer
+} from 'recharts';
 import axios from 'axios';
 import API_CONFIG from '../../config/api';
 import '../../styles/admindashboard.css';
@@ -18,44 +31,7 @@ import DecisionManagement from './DecisionManagement';
 import ProcessWizard from './ProcessWizard';
 import SujetDecisionManagement from './SujetDecisionManagement';
 
-const getCommitteeSessions = (committee) => (Array.isArray(committee?.sessions) ? committee.sessions : []);
-
-const getCommitteeDecisionsCount = (committee) => {
-  if (typeof committee?.totalDecisions === 'number') {
-    return committee.totalDecisions;
-  }
-
-  if (Array.isArray(committee?.decisions)) {
-    return committee.decisions.length;
-  }
-
-  return getCommitteeSessions(committee).reduce((total, session) => {
-    const sessionDecisions = Array.isArray(session?.decisions) ? session.decisions.length : 0;
-    return total + sessionDecisions;
-  }, 0);
-};
-
-const normalizeDashboardStats = (payload) => {
-  const committees = Array.isArray(payload) ? payload : [];
-
-  return {
-    totalComites: committees.length,
-    activeSessions: committees.reduce(
-      (total, committee) =>
-        total +
-        getCommitteeSessions(committee).filter(
-          (session) => String(session?.statut || '').toLowerCase() === 'active',
-        ).length,
-      0,
-    ),
-    totalDecisions: committees.reduce((total, committee) => total + getCommitteeDecisionsCount(committee), 0),
-    completedComites: committees.filter((committee) =>
-      getCommitteeSessions(committee).some(
-        (session) => String(session?.statut || '').toLowerCase() === 'completed',
-      ),
-    ).length,
-  };
-};
+// Dashboard stats logic is now handled in the backend
 
 const AcceuilDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -73,12 +49,15 @@ const AcceuilDashboard = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(API_CONFIG.DIRECTEUR.DASHBOARD);
-      setStats(normalizeDashboardStats(res.data));
+      const token = localStorage.getItem('token');
+      const res = await axios.get(API_CONFIG.DIRECTEUR.DASHBOARD_STATS, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(res.data);
     } catch (error) {
       console.error('Erreur chargement stats:', error);
       showToast('تعذر تحميل بيانات لوحة التحكم', 'error');
-      setStats(normalizeDashboardStats([]));
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -193,32 +172,91 @@ const AcceuilDashboard = () => {
                     </div>
 
                     {stats && (
-                      <div className="stats-grid">
-                        <StatCard
-                          title="إجمالي اللجان"
-                          value={stats.totalComites || 0}
-                          icon={<Briefcase size={28} />}
-                          color="#69c0e2"
-                        />
-                        <StatCard
-                          title="الجلسات النشطة"
-                          value={stats.activeSessions || 0}
-                          icon={<FolderOpen size={28} />}
-                          color="#69c0e2"
-                        />
-                        <StatCard
-                          title="المقررات"
-                          value={stats.totalDecisions || 0}
-                          icon={<Bell size={28} />}
-                          color="#69c0e2"
-                        />
-                        <StatCard
-                          title="اللجان المكتملة"
-                          value={stats.completedComites || 0}
-                          icon={<CheckCircle size={28} />}
-                          color="#69c0e2"
-                        />
-                      </div>
+                      <>
+                        <div className="stats-grid">
+                          <StatCard
+                            title="موظفي الإدارة"
+                            value={stats.employeeCountByDirection || 0}
+                            icon={<Users size={28} />}
+                            color="#69c0e2"
+                          />
+                          <StatCard
+                            title="القرارات التابعة"
+                            value={stats.decisionsByDirection || 0}
+                            icon={<FileText size={28} />}
+                            color="#69c0e2"
+                          />
+                          <StatCard
+                            title="محاضر متأخرة 48س"
+                            value={stats.delayedMinutes || 0}
+                            icon={<AlertTriangle size={28} />}
+                            color="#e26969"
+                          />
+                          <StatCard
+                            title="أنشط عضو لجنة"
+                            value={stats.mostActiveCommitteeMember?.name || 'لا يوجد'}
+                            icon={<Activity size={28} />}
+                            color="#69c0e2"
+                          />
+                        </div>
+
+                        <div className="dashboard-widgets" style={{ marginTop: '30px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                          <div className="chart-container" style={{ flex: '2', minWidth: '400px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                            <h3 style={{ marginBottom: '20px', color: '#fff', fontSize: '18px', fontWeight: '600' }}>نشاط الجلسات والإنجاز (محاضر كل شهر)</h3>
+                            <div style={{ height: '300px', width: '100%', direction: 'ltr' }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={stats.minutesPerMonth || []}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3d" vertical={false} />
+                                  <XAxis dataKey="monthName" stroke="#8a8d9d" axisLine={false} tickLine={false} />
+                                  <YAxis stroke="#8a8d9d" axisLine={false} tickLine={false} />
+                                  <RechartsTooltip 
+                                    contentStyle={{ backgroundColor: '#1a1d2d', borderColor: '#333', borderRadius: '8px', color: '#fff' }} 
+                                    itemStyle={{ color: '#4B9FE3' }}
+                                  />
+                                  <Bar dataKey="count" name="عدد المحاضر" fill="#4B9FE3" radius={[6, 6, 0, 0]} barSize={40} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+
+                          <div className="rapporteur-container" style={{ flex: '1', minWidth: '300px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
+                              <div style={{ background: 'rgba(255, 215, 0, 0.1)', padding: '10px', borderRadius: '12px' }}>
+                                <Award color="#FFD700" size={24} />
+                              </div>
+                              <h3 style={{ color: '#fff', margin: 0, fontSize: '18px', fontWeight: '600' }}>مقرر الجلسات الأكثر نشاطاً</h3>
+                            </div>
+                            {stats.topRapporteur ? (
+                              <div style={{ textAlign: 'center', marginBottom: '30px', padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#4B9FE3' }}>{stats.topRapporteur.name}</div>
+                                <div style={{ color: '#a0a0b0', fontSize: '14px', marginTop: '6px' }}>{stats.topRapporteur.count} عضوية كمقرر</div>
+                              </div>
+                            ) : (
+                              <p style={{ color: '#8a8d9d', textAlign: 'center', padding: '20px 0' }}>لا يوجد بيانات</p>
+                            )}
+
+                            <h4 style={{ color: '#fff', marginBottom: '16px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FileText size={18} color="#69c0e2" />
+                              إحصائيات المقررات
+                            </h4>
+                            <div style={{ maxHeight: '220px', overflowY: 'auto', paddingRight: '5px' }} className="custom-scrollbar">
+                              {stats.rapporteurStatsData && stats.rapporteurStatsData.length > 0 ? (
+                                stats.rapporteurStatsData.map((r, index) => (
+                                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '10px', marginBottom: '10px', borderLeft: '3px solid #4B9FE3' }}>
+                                    <div style={{ color: '#eee', fontWeight: '500', fontSize: '15px' }}>{r.name}</div>
+                                    <div style={{ textAlign: 'left', fontSize: '12px' }}>
+                                      <div style={{ color: '#4B9FE3', fontWeight: '600' }}>{r.sessionCount} جلسات</div>
+                                      {r.sessionCount > 1 && <div style={{ color: '#a0a0b0', marginTop: '2px' }}>تباعد {r.averageDaysSpacing} يوم</div>}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p style={{ color: '#8a8d9d', textAlign: 'center', fontSize: '14px', marginTop: '10px' }}>لا يوجد مقررات حالياً</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}

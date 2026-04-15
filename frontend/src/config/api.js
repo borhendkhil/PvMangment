@@ -52,6 +52,7 @@ export const API_CONFIG = {
 
   DIRECTEUR: {
     DASHBOARD: withRoot('/committees'),
+    DASHBOARD_STATS: withRoot('/dashboard/director/stats'),
     COMITES: withRoot('/committees'),
     DECISIONS_FULL: withRoot('/decisions'),
     DECISION_FULL: (id) => withRoot(`/decisions/${id}`),
