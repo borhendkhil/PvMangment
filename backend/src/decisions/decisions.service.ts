@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { basename } from 'path';
 import { BaseCrudService } from '../common/services/base-crud.service';
 import { CommitteeSessionEntity } from '../database/entities/committee-session.entity';
@@ -8,10 +8,9 @@ import { DecisionEntity } from '../database/entities/decision.entity';
 import { DecisionPdfEntity } from '../database/entities/decision-pdf.entity';
 import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
 import { UserEntity } from '../database/entities/user.entity';
+import { CommitteeEntity } from '../database/entities/comite.entity';
 import { CreateDecisionDto, UpdateDecisionAssignedReportDto, UpdateDecisionDto } from './dto/decision.dto';
 import { CreateDecisionPdfDto, UpdateDecisionPdfDto } from './dto/decision-pdf.dto';
-
-import { CommitteeEntity } from '../database/entities/comite.entity';
 
 @Injectable()
 export class DecisionsService extends BaseCrudService<DecisionEntity> {
@@ -32,14 +31,16 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     super(repository);
   }
 
-  override findAll() {
-    return this.repository.find({
+  override async findAll(): Promise<DecisionEntity[]> {
+    const rows = await this.repository.find({
       relations: { subject: true, session: { comite: true }, decisionPdfs: true, comite: true },
       order: { id: 'DESC' },
     });
+
+    return rows.map((row) => this.normalizeDecision(row));
   }
 
-  async findAssignedToUser(userId: number) {
+  async findAssignedToUser(userId: number): Promise<DecisionEntity[]> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: {
@@ -63,7 +64,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
       return [];
     }
 
-    return this.repository
+    const rows = await this.repository
       .createQueryBuilder('decision')
       .leftJoinAndSelect('decision.subject', 'subject')
       .leftJoinAndSelect('decision.session', 'session')
@@ -75,9 +76,11 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
       .distinct(true)
       .orderBy('decision.id', 'DESC')
       .getMany();
+
+    return rows.map((row) => this.normalizeDecision(row));
   }
 
-  override async findOne(id: number) {
+  override async findOne(id: number): Promise<DecisionEntity> {
     const decision = await this.repository.findOne({
       where: { id },
       relations: {
@@ -87,23 +90,27 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         comite: true,
       },
     });
+
     if (!decision) {
       throw new NotFoundException(`Decision #${id} not found`);
     }
-    return decision;
+
+    return this.normalizeDecision(decision);
   }
 
-  async findCurrentDecision(sessionId: number) {
-    return this.repository.findOne({
+  async findCurrentDecision(sessionId: number): Promise<DecisionEntity | null> {
+    const decision = await this.repository.findOne({
       where: {
-        session: { id: sessionId } as any,
+        session: { id: sessionId } as never,
         current: true,
       },
       relations: { subject: true, session: { comite: true }, decisionPdfs: true, comite: true },
     });
+
+    return decision ? this.normalizeDecision(decision) : null;
   }
 
-  async create(dto: CreateDecisionDto) {
+  async create(dto: CreateDecisionDto): Promise<DecisionEntity> {
     const subject = dto.sujetId
       ? await this.subjectRepository.findOne({ where: { id: dto.sujetId } })
       : null;
@@ -113,6 +120,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     const comite = dto.comiteId
       ? await this.comiteRepository.findOne({ where: { id: dto.comiteId } })
       : null;
+
     if (dto.sujetId && !subject) {
       throw new NotFoundException(`Subject decision #${dto.sujetId} not found`);
     }
@@ -135,7 +143,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         executionStructure: dto.executionStructure ?? null,
         deadlineText: dto.deadlineText ?? null,
         fichierPath: dto.fichierPath ?? null,
-        fichierName: dto.fichierName ?? null,
+        fichierName: this.normalizeFileName(dto.fichierName ?? null),
         statut: dto.statut ?? null,
         current: dto.current ?? false,
         dateUpload: dto.dateUpload ? new Date(dto.dateUpload) : null,
@@ -145,8 +153,9 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     return this.findOne(saved.id);
   }
 
-  async update(id: number, dto: UpdateDecisionDto) {
+  async update(id: number, dto: UpdateDecisionDto): Promise<DecisionEntity> {
     const decision = await this.findOne(id);
+
     if (dto.sujetId !== undefined) {
       if (dto.sujetId) {
         const subject = await this.subjectRepository.findOne({ where: { id: dto.sujetId } });
@@ -158,6 +167,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         decision.subject = null;
       }
     }
+
     if (dto.sessionId !== undefined) {
       if (dto.sessionId) {
         const session = await this.sessionRepository.findOne({ where: { id: dto.sessionId } });
@@ -169,6 +179,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         decision.session = null;
       }
     }
+
     if (dto.comiteId !== undefined) {
       if (dto.comiteId) {
         const comite = await this.comiteRepository.findOne({ where: { id: dto.comiteId } });
@@ -180,6 +191,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
         decision.comite = null;
       }
     }
+
     if (dto.numAdmin !== undefined) decision.numAdmin = dto.numAdmin ?? null;
     if (dto.titre !== undefined) decision.titre = dto.titre ?? null;
     if (dto.description !== undefined) decision.description = dto.description ?? null;
@@ -187,17 +199,22 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     if (dto.executionStructure !== undefined) decision.executionStructure = dto.executionStructure ?? null;
     if (dto.deadlineText !== undefined) decision.deadlineText = dto.deadlineText ?? null;
     if (dto.fichierPath !== undefined) decision.fichierPath = dto.fichierPath ?? null;
-    if (dto.fichierName !== undefined) decision.fichierName = dto.fichierName ?? null;
+    if (dto.fichierName !== undefined) decision.fichierName = this.normalizeFileName(dto.fichierName ?? null);
     if (dto.statut !== undefined) decision.statut = dto.statut ?? null;
     if (dto.current !== undefined) decision.current = dto.current;
     if (dto.dateUpload !== undefined) {
       decision.dateUpload = dto.dateUpload ? new Date(dto.dateUpload) : null;
     }
+
     const saved = await this.repository.save(decision);
     return this.findOne(saved.id);
   }
 
-  async updateAssignedReportRow(userId: number, decisionId: number, dto: UpdateDecisionAssignedReportDto) {
+  async updateAssignedReportRow(
+    userId: number,
+    decisionId: number,
+    dto: UpdateDecisionAssignedReportDto,
+  ): Promise<DecisionEntity> {
     const decision = await this.repository.findOne({
       where: { id: decisionId },
       relations: {
@@ -234,7 +251,11 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     }
 
     const roleName = `${membership.roleComite?.labelAr || ''} ${membership.roleComite?.name || ''}`.toLowerCase();
-    const canEditReport = roleName.includes('مقرر') || roleName.includes('rapporteur') || roleName.includes('reporter');
+    const canEditReport =
+      roleName.includes('\u0645\u0642\u0631\u0631') ||
+      roleName.includes('rapporteur') ||
+      roleName.includes('reporter');
+
     if (!canEditReport) {
       throw new ForbiddenException('Only rapporteur can edit session report rows');
     }
@@ -253,32 +274,36 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     return this.findOne(saved.id);
   }
 
-  async createDecisionPdf(dto: CreateDecisionPdfDto) {
+  async createDecisionPdf(dto: CreateDecisionPdfDto): Promise<DecisionPdfEntity> {
     const decision = await this.findOne(dto.decisionId);
-    const pdf = await this.decisionPdfRepository.save(
-      this.decisionPdfRepository.create({
-        decision,
-        pdfPath: dto.pdfPath,
-        pdfName: dto.pdfName ?? null,
-      }),
-    );
+    const pdfName = this.normalizeFileName(dto.pdfName ?? null);
+
+    const pdf = this.decisionPdfRepository.create({
+      decision,
+      pdfPath: dto.pdfPath,
+      pdfName,
+    });
+    const savedPdf = await this.decisionPdfRepository.save(pdf);
 
     await this.repository.update(decision.id, {
-      fichierPath: pdf.pdfPath,
-      fichierName: pdf.pdfName ?? decision.fichierName,
-      dateUpload: pdf.dateUpload,
+      fichierPath: savedPdf.pdfPath,
+      fichierName: pdfName ?? decision.fichierName,
+      dateUpload: savedPdf.dateUpload,
     });
 
-    return pdf;
+    return this.normalizeDecisionPdf(savedPdf);
   }
 
-  async addDecisionPdfs(decisionId: number, files: Array<{ path?: string; filename?: string; originalname?: string }>) {
+  async addDecisionPdfs(
+    decisionId: number,
+    files: Array<{ path?: string; filename?: string; originalname?: string }>,
+  ): Promise<DecisionPdfEntity[]> {
     const decision = await this.findOne(decisionId);
     const rows = files.map((file) =>
       this.decisionPdfRepository.create({
         decision,
         pdfPath: this.normalizeDecisionPdfPath(file),
-        pdfName: file.originalname ?? file.filename ?? null,
+        pdfName: this.normalizeFileName(file.originalname ?? file.filename ?? null),
       }),
     );
     const savedRows = await this.decisionPdfRepository.save(rows);
@@ -292,7 +317,7 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
       });
     }
 
-    return savedRows;
+    return savedRows.map((row) => this.normalizeDecisionPdf(row));
   }
 
   private normalizeDecisionPdfPath(file: { path?: string; filename?: string; originalname?: string }) {
@@ -308,39 +333,97 @@ export class DecisionsService extends BaseCrudService<DecisionEntity> {
     return '';
   }
 
-  findAllDecisionPdfs() {
-    return this.decisionPdfRepository.find({ relations: { decision: true }, order: { id: 'ASC' } });
+  async findAllDecisionPdfs(): Promise<DecisionPdfEntity[]> {
+    const rows = await this.decisionPdfRepository.find({
+      relations: { decision: true },
+      order: { id: 'ASC' },
+    });
+
+    return rows.map((row) => this.normalizeDecisionPdf(row));
   }
 
-  async findDecisionPdf(id: number) {
+  async findDecisionPdf(id: number): Promise<DecisionPdfEntity> {
     const row = await this.decisionPdfRepository.findOne({
       where: { id },
       relations: { decision: true },
     });
+
     if (!row) {
       throw new NotFoundException(`Decision PDF #${id} not found`);
     }
-    return row;
+
+    return this.normalizeDecisionPdf(row);
   }
 
-  async updateDecisionPdf(id: number, dto: UpdateDecisionPdfDto) {
+  async findDecisionPdfBySafeName(safeName: string): Promise<DecisionPdfEntity | null> {
+    const row = await this.decisionPdfRepository.findOne({
+      where: { pdfPath: `/uploads/decision-pdfs/${safeName}` },
+    });
+
+    return row ? this.normalizeDecisionPdf(row) : null;
+  }
+
+  async updateDecisionPdf(id: number, dto: UpdateDecisionPdfDto): Promise<DecisionPdfEntity> {
     const row = await this.findDecisionPdf(id);
-    if (dto.decisionId !== undefined) {
-      if (dto.decisionId) {
-        const decision = await this.repository.findOne({ where: { id: dto.decisionId } });
-        if (!decision) {
-          throw new NotFoundException(`Decision #${dto.decisionId} not found`);
-        }
-        row.decision = decision;
+
+    if (dto.decisionId !== undefined && dto.decisionId) {
+      const decision = await this.repository.findOne({ where: { id: dto.decisionId } });
+      if (!decision) {
+        throw new NotFoundException(`Decision #${dto.decisionId} not found`);
       }
+      row.decision = decision;
     }
+
     if (dto.pdfPath !== undefined) row.pdfPath = dto.pdfPath;
-    if (dto.pdfName !== undefined) row.pdfName = dto.pdfName ?? null;
-    return this.decisionPdfRepository.save(row);
+    if (dto.pdfName !== undefined) row.pdfName = this.normalizeFileName(dto.pdfName ?? null);
+
+    const savedRow = await this.decisionPdfRepository.save(row);
+    return this.normalizeDecisionPdf(savedRow);
   }
 
-  async removeDecisionPdf(id: number) {
+  async removeDecisionPdf(id: number): Promise<void> {
     const row = await this.findDecisionPdf(id);
     await this.decisionPdfRepository.remove(row);
+  }
+
+  private normalizeDecision(decision: DecisionEntity): DecisionEntity {
+    decision.fichierName = this.normalizeFileName(decision.fichierName);
+
+    if (decision.decisionPdfs?.length) {
+      decision.decisionPdfs = decision.decisionPdfs.map((pdf) => {
+        pdf.pdfName = this.normalizeFileName(pdf.pdfName);
+        return pdf;
+      });
+    }
+
+    return decision;
+  }
+
+  private normalizeDecisionPdf(pdf: DecisionPdfEntity): DecisionPdfEntity {
+    pdf.pdfName = this.normalizeFileName(pdf.pdfName);
+
+    if (pdf.decision) {
+      pdf.decision.fichierName = this.normalizeFileName(pdf.decision.fichierName);
+    }
+
+    return pdf;
+  }
+
+  private normalizeFileName(fileName: string | null): string | null {
+    if (!fileName) {
+      return fileName;
+    }
+
+    const looksMisencoded = /(?:\u00C3|\u00D8|\u00D9|\u00D0|\u00D1|\uFFFD|[\u0080-\u009F])/.test(fileName);
+    if (!looksMisencoded) {
+      return fileName;
+    }
+
+    try {
+      const decoded = Buffer.from(fileName, 'latin1').toString('utf8');
+      return decoded && !decoded.includes('\uFFFD') ? decoded : fileName;
+    } catch {
+      return fileName;
+    }
   }
 }

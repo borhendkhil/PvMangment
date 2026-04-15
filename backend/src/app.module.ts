@@ -30,6 +30,7 @@ import { ActivityLogInterceptor } from './common/interceptors/activity-log.inter
         synchronize: false,
         logging: configService.get<string>('DB_LOGGING', 'false') === 'true',
         timezone: '+00:00',
+        charset: 'utf8mb4',
       }),
     }),
     LogsModule,

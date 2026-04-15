@@ -172,7 +172,18 @@ const DecisionManagement = () => {
                   <tr key={decision.id} style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <Td>{decision.id}</Td>
                     <Td>{decision.subject?.sujet || decision.sujetNom || '-'}</Td>
-                    <Td>{decision.fichierName || '-'}</Td>
+                    <Td>
+                      {decision.fichierName ? (
+                        <a
+                          href={`http://localhost:3000/decision-pdfs/file/${decision.fichierPath?.split('/').pop()}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#4fc3f7', textDecoration: 'underline' }}
+                        >
+                          {decision.fichierName}
+                        </a>
+                      ) : '-'}
+                    </Td>
                     <Td><StatusBadge status={status} /></Td>
                     <Td>{formatDateDDMMYYYY(decision.dateCreation || decision.dateUpload)}</Td>
                     <Td>

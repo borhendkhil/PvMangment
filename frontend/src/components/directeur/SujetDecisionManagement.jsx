@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import '../../styles/admindashboard.css';
 import { showToast } from '../common/Toaster';
+import { API_CONFIG } from '../../config/api';
 import ModalPortal from '../common/ModalPortal';
 
 const SujetDecisionManagement = () => {
