@@ -12,6 +12,7 @@ import { LogsModule } from './logs/logs.module';
 import { UsersModule } from './users/users.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
+import { DatabaseModule } from './database/database.module';
 import { ActivityLogInterceptor } from './common/interceptors/activity-log.interceptor';
 
 @Module({
@@ -45,6 +46,7 @@ import { ActivityLogInterceptor } from './common/interceptors/activity-log.inter
     DecisionsModule,
     DashboardModule,
     ReportsModule,
+    DatabaseModule,
   ],
   providers: [
     {

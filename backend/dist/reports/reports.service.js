@@ -61,18 +61,24 @@ let ReportsService = class ReportsService {
         return this.reportRepository.save(report);
     }
     async getSessionReport(sessionId) {
-        const report = await this.reportRepository.findOne({
-            where: { session: { id: sessionId } },
-            relations: ['feedbacks', 'feedbacks.user', 'session'],
-        });
+        const report = await this.reportRepository
+            .createQueryBuilder('report')
+            .leftJoinAndSelect('report.session', 'session')
+            .leftJoinAndSelect('report.feedbacks', 'feedbacks')
+            .leftJoinAndSelect('feedbacks.user', 'user')
+            .where('session.id = :sessionId', { sessionId })
+            .getOne();
         return report || { feedbacks: [], session: { id: sessionId } };
     }
     async getReportFeedbacks(reportId) {
-        return this.feedbackRepository.find({
-            where: { report: { id: reportId } },
-            relations: ['user', 'user.employe'],
-            order: { dateCreation: 'DESC' },
-        });
+        return this.feedbackRepository
+            .createQueryBuilder('feedback')
+            .leftJoinAndSelect('feedback.report', 'report')
+            .leftJoinAndSelect('feedback.user', 'user')
+            .leftJoinAndSelect('user.employe', 'employe')
+            .where('report.id = :reportId', { reportId })
+            .orderBy('feedback.dateCreation', 'DESC')
+            .getMany();
     }
     async initializeFeedback(reportId, userId, dto) {
         const report = await this.reportRepository.findOne({ where: { id: reportId } });

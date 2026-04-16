@@ -21,6 +21,7 @@ const logs_module_1 = require("./logs/logs.module");
 const users_module_1 = require("./users/users.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const reports_module_1 = require("./reports/reports.module");
+const database_module_1 = require("./database/database.module");
 const activity_log_interceptor_1 = require("./common/interceptors/activity-log.interceptor");
 let AppModule = class AppModule {
 };
@@ -57,6 +58,7 @@ exports.AppModule = AppModule = __decorate([
             decisions_module_1.DecisionsModule,
             dashboard_module_1.DashboardModule,
             reports_module_1.ReportsModule,
+            database_module_1.DatabaseModule,
         ],
         providers: [
             {

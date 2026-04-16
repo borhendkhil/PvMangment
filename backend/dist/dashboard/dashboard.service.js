@@ -347,62 +347,68 @@ let DashboardService = class DashboardService {
         if (!employeId) {
             return defaultResponse;
         }
-        const memberCommitteesDecisionsRaw = await this.decisionRepository
-            .createQueryBuilder('decision')
-            .select('COUNT(DISTINCT decision.id)', 'count')
-            .leftJoin('decision.comite', 'comite')
-            .leftJoin('decision.session', 'session')
-            .leftJoin('session.comite', 'sessionComite')
-            .innerJoin(member_comite_entity_1.MemberComiteEntity, 'member', '(member.comite_id = comite.id OR member.comite_id = sessionComite.id) AND member.employe_id = :employeId', { employeId })
-            .getRawOne();
-        const rapporteurSessionsRaw = await this.sessionRepository
-            .createQueryBuilder('session')
-            .select('COUNT(DISTINCT session.id)', 'count')
-            .innerJoin('session.comite', 'comite')
-            .innerJoin('comite.members', 'member')
-            .innerJoin('member.roleComite', 'roleComite')
-            .where('member.employe_id = :employeId', { employeId })
-            .andWhere('(roleComite.name = :roleName OR roleComite.labelAr LIKE :labelAr)', {
-            roleName: 'rapporteur',
-            labelAr: '%مقرر%',
-        })
-            .getRawOne();
-        const completedDelayedReportsRaw = await this.sessionReportRepository
-            .createQueryBuilder('report')
-            .select('COUNT(DISTINCT report.id)', 'count')
-            .innerJoin('report.session', 'session')
-            .innerJoin('session.comite', 'comite')
-            .innerJoin('comite.members', 'member')
-            .innerJoin('member.roleComite', 'roleComite')
-            .where('member.employe_id = :employeId', { employeId })
-            .andWhere('(roleComite.name = :roleName OR roleComite.labelAr LIKE :labelAr)', {
-            roleName: 'rapporteur',
-            labelAr: '%مقرر%',
-        })
-            .andWhere('session.date_session IS NOT NULL')
-            .andWhere('report.date_creation IS NOT NULL')
-            .andWhere('report.date_creation > DATE_ADD(session.date_session, INTERVAL 48 HOUR)')
-            .getRawOne();
-        const hasCabinetWarningColumn = await this.hasCabinetWarningColumn();
-        let employeeWarningsCount = 0;
-        if (hasCabinetWarningColumn) {
-            const employeeWarningsRaw = await this.sessionRepository
+        try {
+            const memberCommitteesDecisionsRaw = await this.decisionRepository
+                .createQueryBuilder('decision')
+                .select('COUNT(DISTINCT decision.id)', 'count')
+                .leftJoin('decision.comite', 'comite')
+                .leftJoin('decision.session', 'session')
+                .leftJoin('session.comite', 'sessionComite')
+                .innerJoin(member_comite_entity_1.MemberComiteEntity, 'member', '(member.comite_id = comite.id OR member.comite_id = sessionComite.id) AND member.employe_id = :employeId', { employeId })
+                .getRawOne();
+            const rapporteurSessionsRaw = await this.sessionRepository
                 .createQueryBuilder('session')
                 .select('COUNT(DISTINCT session.id)', 'count')
                 .innerJoin('session.comite', 'comite')
                 .innerJoin('comite.members', 'member')
+                .innerJoin('member.roleComite', 'roleComite')
                 .where('member.employe_id = :employeId', { employeId })
-                .andWhere('session.cabinet_warning IS NOT NULL')
-                .andWhere("TRIM(session.cabinet_warning) != ''")
+                .andWhere('(roleComite.name = :roleName OR roleComite.labelAr LIKE :labelAr)', {
+                roleName: 'rapporteur',
+                labelAr: '%مقرر%',
+            })
                 .getRawOne();
-            employeeWarningsCount = parseInt(employeeWarningsRaw?.count || '0');
+            const completedDelayedReportsRaw = await this.sessionReportRepository
+                .createQueryBuilder('report')
+                .select('COUNT(DISTINCT report.id)', 'count')
+                .innerJoin('report.session', 'session')
+                .innerJoin('session.comite', 'comite')
+                .innerJoin('comite.members', 'member')
+                .innerJoin('member.roleComite', 'roleComite')
+                .where('member.employe_id = :employeId', { employeId })
+                .andWhere('(roleComite.name = :roleName OR roleComite.labelAr LIKE :labelAr)', {
+                roleName: 'rapporteur',
+                labelAr: '%مقرر%',
+            })
+                .andWhere('session.date_session IS NOT NULL')
+                .andWhere('report.date_creation IS NOT NULL')
+                .andWhere('report.date_creation > DATE_ADD(session.date_session, INTERVAL 48 HOUR)')
+                .getRawOne();
+            const hasCabinetWarningColumn = await this.hasCabinetWarningColumn();
+            let employeeWarningsCount = 0;
+            if (hasCabinetWarningColumn) {
+                const employeeWarningsRaw = await this.sessionRepository
+                    .createQueryBuilder('session')
+                    .select('COUNT(DISTINCT session.id)', 'count')
+                    .innerJoin('session.comite', 'comite')
+                    .innerJoin('comite.members', 'member')
+                    .where('member.employe_id = :employeId', { employeId })
+                    .andWhere('session.cabinet_warning IS NOT NULL')
+                    .andWhere("TRIM(session.cabinet_warning) != ''")
+                    .getRawOne();
+                employeeWarningsCount = parseInt(employeeWarningsRaw?.count || '0');
+            }
+            return {
+                memberCommitteesDecisionsCount: parseInt(memberCommitteesDecisionsRaw?.count || '0'),
+                rapporteurSessionsCount: parseInt(rapporteurSessionsRaw?.count || '0'),
+                completedDelayedReportsCount: parseInt(completedDelayedReportsRaw?.count || '0'),
+                employeeWarningsCount,
+            };
         }
-        return {
-            memberCommitteesDecisionsCount: parseInt(memberCommitteesDecisionsRaw?.count || '0'),
-            rapporteurSessionsCount: parseInt(rapporteurSessionsRaw?.count || '0'),
-            completedDelayedReportsCount: parseInt(completedDelayedReportsRaw?.count || '0'),
-            employeeWarningsCount,
-        };
+        catch (error) {
+            console.error('Dashboard user stats failed, returning defaults', error);
+            return defaultResponse;
+        }
     }
     async updateCabinetNotes(sessionId, body) {
         const session = await this.sessionRepository

@@ -399,6 +399,8 @@ export class DashboardService {
       return defaultResponse;
     }
 
+    try {
+
     const memberCommitteesDecisionsRaw = await this.decisionRepository
       .createQueryBuilder('decision')
       .select('COUNT(DISTINCT decision.id)', 'count')
@@ -465,6 +467,10 @@ export class DashboardService {
       completedDelayedReportsCount: parseInt(completedDelayedReportsRaw?.count || '0'),
       employeeWarningsCount,
     };
+    } catch (error) {
+      console.error('Dashboard user stats failed, returning defaults', error);
+      return defaultResponse;
+    }
   }
 
   async updateCabinetNotes(sessionId: number, body: { warning?: string }) {

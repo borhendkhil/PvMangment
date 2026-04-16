@@ -99,6 +99,7 @@ DROP TABLE IF EXISTS `decision`;
 CREATE TABLE IF NOT EXISTS `decision` (
   `id` int NOT NULL AUTO_INCREMENT,
   `sujet_id` int DEFAULT NULL,
+  `session_id` int DEFAULT NULL,
   `fichier_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `fichier_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `pdf_path` varchar(255) COLLATE utf8mb4_unicode_ci,
@@ -108,7 +109,9 @@ CREATE TABLE IF NOT EXISTS `decision` (
   `date_upload` datetime,
   PRIMARY KEY (`id`),
   KEY `idx_decision_sujet` (`sujet_id`),
-  FOREIGN KEY (`sujet_id`) REFERENCES `sujet_decision`(`id`) ON DELETE SET NULL
+  KEY `idx_decision_session` (`session_id`),
+  FOREIGN KEY (`sujet_id`) REFERENCES `sujet_decision`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`session_id`) REFERENCES `comite_session`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -412,15 +415,15 @@ CREATE TABLE IF NOT EXISTS `user` (
 -- Déchargement des données de la table `user`
 --
 
-INSERT INTO `user` (`id`, `email`, `password`, `nom_prenom`, `telephone`, `enabled`, `created_at`) VALUES
-(1, 'samah.dekhil@agrinet.tn', '$2a$12$fb9qftAbBdfVjTUf2QBv2uo2g55gCZqJvZNvy.yuUpLZgHRfKy3Mu', 'سماح دخيل', NULL, 1, '2026-04-02 14:29:02'),
-(2, 'newuser@example.com', '$2a$12$dhJuP0zy4kwwcejROcxtde3jkE8O9J6HwNXaL8QwNNF8Kjyla4fDC', 'Jane Doe', NULL, 0, '2026-04-02 14:29:02'),
-(3, 'user@example.com', '$2a$12$xHzUlwOWR4hUTdVL4qWmDO5heqc6IFl7v1ld11EePTdDVV5H/Drfy', 'Admin', '24045515', 1, '2026-04-02 14:29:02'),
-(4, 'user@user.com', '$2a$12$bNqcX4qUFJJEqRbvBRAU/.ELZU71qHL1CrdG3Xvr0QLYuX0W1moJm', 'ميلاد عبد المنعم', '', 1, '2026-04-02 14:29:02'),
-(5, 'test@test.com', '$2a$12$Y188HnqnmWWIC9QnrrlAYuVkptQtmFqRAhl6HVvuPF2DEzRf8Phvq', 'Test User', '123456', 1, '2026-04-02 15:07:23'),
-(6, 'admin_it@agrinet.tn', '$2a$12$HtoPyG4FcFqg/Db7Hcg7sOIL69ZM23FlRMN.0soLN3BJInbp0iteO', 'دخيل سماح', '111111', 1, '2026-04-02 15:08:03'),
-(7, 'director@agrinet.tn', '$2a$12$DIi0rpjQKyk83dHg7dioyebcjamFiJdH7DvwHhskoTEbTDucBBXui', 'Director', '222222', 1, '2026-04-02 15:12:42'),
-(8, 'cabinet@agrinet.tn', '$2a$12$pKiPWO47hPSnno6lqTKCYOjIRjMTPSSkbcxa1TLjyQ/S7ybg1c10O', 'Cabinet Admin', '333333', 1, '2026-04-02 15:12:46');
+INSERT INTO `user` (`id`, `email`, `password`, `telephone`, `enabled`, `created_at`) VALUES
+(1, 'samah.dekhil@agrinet.tn', '$2a$12$fb9qftAbBdfVjTUf2QBv2uo2g55gCZqJvZNvy.yuUpLZgHRfKy3Mu', NULL, 1, '2026-04-02 14:29:02'),
+(2, 'newuser@example.com', '$2a$12$dhJuP0zy4kwwcejROcxtde3jkE8O9J6HwNXaL8QwNNF8Kjyla4fDC', NULL, 0, '2026-04-02 14:29:02'),
+(3, 'user@example.com', '$2a$12$xHzUlwOWR4hUTdVL4qWmDO5heqc6IFl7v1ld11EePTdDVV5H/Drfy', '24045515', 1, '2026-04-02 14:29:02'),
+(4, 'user@user.com', '$2a$12$bNqcX4qUFJJEqRbvBRAU/.ELZU71qHL1CrdG3Xvr0QLYuX0W1moJm', '', 1, '2026-04-02 14:29:02'),
+(5, 'test@test.com', '$2a$12$Y188HnqnmWWIC9QnrrlAYuVkptQtmFqRAhl6HVvuPF2DEzRf8Phvq', '123456', 1, '2026-04-02 15:07:23'),
+(6, 'admin_it@agrinet.tn', '$2a$12$HtoPyG4FcFqg/Db7Hcg7sOIL69ZM23FlRMN.0soLN3BJInbp0iteO', '111111', 1, '2026-04-02 15:08:03'),
+(7, 'director@agrinet.tn', '$2a$12$DIi0rpjQKyk83dHg7dioyebcjamFiJdH7DvwHhskoTEbTDucBBXui', '222222', 1, '2026-04-02 15:12:42'),
+(8, 'cabinet@agrinet.tn', '$2a$12$pKiPWO47hPSnno6lqTKCYOjIRjMTPSSkbcxa1TLjyQ/S7ybg1c10O', '333333', 1, '2026-04-02 15:12:46');
 
 -- --------------------------------------------------------
 
@@ -449,6 +452,49 @@ INSERT INTO `user_role` (`user_id`, `role_id`) VALUES
 (6, 1),
 (7, 4),
 (8, 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `session_report`
+--
+
+DROP TABLE IF EXISTS `session_report`;
+CREATE TABLE IF NOT EXISTS `session_report` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `session_id` int NOT NULL,
+  `topic` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `context` text COLLATE utf8mb4_unicode_ci,
+  `discussion` text COLLATE utf8mb4_unicode_ci,
+  `rows_json` longtext COLLATE utf8mb4_unicode_ci,
+  `statut` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'DRAFT',
+  `date_creation` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `session_id` (`session_id`),
+  FOREIGN KEY (`session_id`) REFERENCES `comite_session`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `report_feedback`
+--
+
+DROP TABLE IF EXISTS `report_feedback`;
+CREATE TABLE IF NOT EXISTS `report_feedback` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `report_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `date_creation` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_report_feedback` (`report_id`),
+  KEY `idx_user_feedback` (`user_id`),
+  FOREIGN KEY (`report_id`) REFERENCES `session_report`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
