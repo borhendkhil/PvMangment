@@ -50,12 +50,14 @@ const Login = () => {
             } else if (primaryRole === 'admin_cabinet') {
                 // Admin Cabinet
                 navigate('/admin-cabinet/dashboard');
-            } else if (isRapporteur) {
-                // Committee Rapporteur
-                navigate('/comite/rapporteur/dashboard');
             } else if (primaryRole === 'user') {
-                // User/Member
+                // Base application role stays "user".
+                // Committee roles like rapporteur add extra workspace access,
+                // but should not replace the normal user dashboard.
                 navigate('/dashboard');
+            } else if (isRapporteur) {
+                // Fallback for users that only have committee rapporteur access
+                navigate('/comite/rapporteur/dashboard');
             } else if (primaryRole === 'directeur') {
                 // Directeur
                 navigate('/directeur/acceuildashboard');

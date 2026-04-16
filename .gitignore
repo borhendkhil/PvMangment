@@ -15,16 +15,16 @@ pnpm-debug.log*
 !.env.example
 
 # Build outputs
-dist/
-build/
-coverage/
-*.tsbuildinfo
+# dist/
+# build/
+# coverage/
+# *.tsbuildinfo
 
 # Vite / frontend cache
 .vite/
 
 # Backend runtime artifacts
-backend/uploads/
+# backend/uploads/
 
 # OS / editor
 .DS_Store

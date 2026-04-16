@@ -324,6 +324,17 @@ const RapporteurDashboard = () => {
           )}
         </nav>
 
+        <button
+          className="nav-item"
+          onClick={() => {
+            window.location.href = '/dashboard';
+          }}
+          style={{ marginTop: '8px' }}
+        >
+          <LayoutDashboard />
+          <span>فضاء المستخدم</span>
+        </button>
+
         <button className="logout" onClick={logout}>
           <LogOut /> تسجيل الخروج
         </button>
@@ -338,7 +349,7 @@ const RapporteurDashboard = () => {
               <p style={{ margin: 0, color: '#69c0e2', fontSize: '12px' }}>الصفة: {memberRoleLabel}</p>
             </div>
           </div>
-          <h1>{activeTab === 'overview' ? 'ملخص اللجنة' : activeTab === 'minutes' ? 'محضر الجلسة' : 'المقررات المسندة'}</h1>
+          <h1 style={{ color: 'rgb(1, 60, 147)' }}>{activeTab === 'overview' ? 'ملخص اللجنة' : activeTab === 'minutes' ? 'محضر الجلسة' : 'المقررات المسندة'}</h1>
         </header>
 
         <div style={contentWrap}>
@@ -479,7 +490,7 @@ const RapporteurDashboard = () => {
         <div style={modalBackdropStyle} onClick={() => setMinutesModalOpen(false)}>
           <div style={modalPanelStyle} onClick={(e) => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h3 style={{ margin: 0 }}>محرر محضر الجلسة</h3>
+              <h3 style={{ margin: 0, color: 'rgb(1, 60, 147)' }}>محرر محضر الجلسة</h3>
               <button style={closeBtnStyle} onClick={() => setMinutesModalOpen(false)}><X size={16} /></button>
             </div>
 

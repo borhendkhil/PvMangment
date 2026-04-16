@@ -4,10 +4,12 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CommitteeEntity } from './comite.entity';
 import { DecisionEntity } from './decision.entity';
+import { SessionReportEntity } from './session-report.entity';
 
 @Entity({ name: 'comite_session' })
 export class CommitteeSessionEntity {
@@ -29,17 +31,11 @@ export class CommitteeSessionEntity {
   @Column({ name: 'statut', type: 'varchar', length: 50, nullable: true })
   statut: string | null;
 
-  @Column({ name: 'report_topic', type: 'varchar', length: 255, nullable: true })
-  reportTopic: string | null;
+  @Column({ name: 'cabinet_warning', type: 'text', nullable: true })
+  cabinetWarning: string | null;
 
-  @Column({ name: 'report_context', type: 'text', nullable: true })
-  reportContext: string | null;
-
-  @Column({ name: 'report_discussion', type: 'text', nullable: true })
-  reportDiscussion: string | null;
-
-  @Column({ name: 'report_rows_json', type: 'longtext', nullable: true })
-  reportRowsJson: string | null;
+  @OneToOne(() => SessionReportEntity, report => report.session)
+  report: SessionReportEntity;
 
   @OneToMany(() => DecisionEntity, (decision) => decision.session)
   decisions: DecisionEntity[];

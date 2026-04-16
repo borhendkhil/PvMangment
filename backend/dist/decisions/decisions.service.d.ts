@@ -1,0 +1,40 @@
+import { Repository } from 'typeorm';
+import { BaseCrudService } from '../common/services/base-crud.service';
+import { CommitteeSessionEntity } from '../database/entities/committee-session.entity';
+import { DecisionEntity } from '../database/entities/decision.entity';
+import { DecisionPdfEntity } from '../database/entities/decision-pdf.entity';
+import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
+import { UserEntity } from '../database/entities/user.entity';
+import { CommitteeEntity } from '../database/entities/comite.entity';
+import { CreateDecisionDto, UpdateDecisionAssignedReportDto, UpdateDecisionDto } from './dto/decision.dto';
+import { CreateDecisionPdfDto, UpdateDecisionPdfDto } from './dto/decision-pdf.dto';
+export declare class DecisionsService extends BaseCrudService<DecisionEntity> {
+    private readonly subjectRepository;
+    private readonly sessionRepository;
+    private readonly decisionPdfRepository;
+    private readonly comiteRepository;
+    private readonly userRepository;
+    constructor(repository: Repository<DecisionEntity>, subjectRepository: Repository<SubjectDecisionEntity>, sessionRepository: Repository<CommitteeSessionEntity>, decisionPdfRepository: Repository<DecisionPdfEntity>, comiteRepository: Repository<CommitteeEntity>, userRepository: Repository<UserEntity>);
+    findAll(): Promise<DecisionEntity[]>;
+    findAssignedToUser(userId: number): Promise<DecisionEntity[]>;
+    findOne(id: number): Promise<DecisionEntity>;
+    findCurrentDecision(sessionId: number): Promise<DecisionEntity | null>;
+    create(dto: CreateDecisionDto): Promise<DecisionEntity>;
+    update(id: number, dto: UpdateDecisionDto): Promise<DecisionEntity>;
+    updateAssignedReportRow(userId: number, decisionId: number, dto: UpdateDecisionAssignedReportDto): Promise<DecisionEntity>;
+    createDecisionPdf(dto: CreateDecisionPdfDto): Promise<DecisionPdfEntity>;
+    addDecisionPdfs(decisionId: number, files: Array<{
+        path?: string;
+        filename?: string;
+        originalname?: string;
+    }>): Promise<DecisionPdfEntity[]>;
+    private normalizeDecisionPdfPath;
+    findAllDecisionPdfs(): Promise<DecisionPdfEntity[]>;
+    findDecisionPdf(id: number): Promise<DecisionPdfEntity>;
+    findDecisionPdfBySafeName(safeName: string): Promise<DecisionPdfEntity | null>;
+    updateDecisionPdf(id: number, dto: UpdateDecisionPdfDto): Promise<DecisionPdfEntity>;
+    removeDecisionPdf(id: number): Promise<void>;
+    private normalizeDecision;
+    private normalizeDecisionPdf;
+    private normalizeFileName;
+}

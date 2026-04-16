@@ -50,6 +50,17 @@ export const API_CONFIG = {
     DECISION_PDFS: withRoot('/decision-pdfs'),
   },
 
+  CABINET: {
+    DASHBOARD_STATS: withRoot('/dashboard/cabinet/stats'),
+    UPDATE_NOTES: (sessionId) => withRoot(`/dashboard/cabinet/sessions/${sessionId}/notes`),
+  },
+  REPORTS: {
+    GET: (sessionId) => withRoot(`/sessions/${sessionId}/report`),
+    SAVE: (sessionId) => withRoot(`/sessions/${sessionId}/report`),
+    FEEDBACKS: (reportId) => withRoot(`/sessions/reports/${reportId}/feedbacks`),
+    DELETE_FEEDBACK: (feedbackId) => withRoot(`/sessions/feedbacks/${feedbackId}`),
+  },
+
   DIRECTEUR: {
     DASHBOARD: withRoot('/committees'),
     DASHBOARD_STATS: withRoot('/dashboard/director/stats'),
@@ -88,6 +99,7 @@ export const API_CONFIG = {
   USER: {
     PROFILE: withRoot('/users/me'),
     DASHBOARD: withRoot('/users/dashboard'),
+    DASHBOARD_STATS: withRoot('/dashboard/user/stats'),
   },
 
   COMITE: {

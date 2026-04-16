@@ -46,10 +46,6 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
         dateSession: dto.dateSession ? new Date(dto.dateSession) : null,
         lieu: dto.lieu ?? null,
         statut: dto.statut ?? null,
-        reportTopic: dto.reportTopic ?? null,
-        reportContext: dto.reportContext ?? null,
-        reportDiscussion: dto.reportDiscussion ?? null,
-        reportRowsJson: dto.reportRowsJson ?? null,
       }),
     );
   }
@@ -70,10 +66,6 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
     }
     if (dto.lieu !== undefined) session.lieu = dto.lieu ?? null;
     if (dto.statut !== undefined) session.statut = dto.statut ?? null;
-    if (dto.reportTopic !== undefined) session.reportTopic = dto.reportTopic ?? null;
-    if (dto.reportContext !== undefined) session.reportContext = dto.reportContext ?? null;
-    if (dto.reportDiscussion !== undefined) session.reportDiscussion = dto.reportDiscussion ?? null;
-    if (dto.reportRowsJson !== undefined) session.reportRowsJson = dto.reportRowsJson ?? null;
     return this.repository.save(session);
   }
 
@@ -128,11 +120,8 @@ export class CommitteeSessionsService extends BaseCrudService<CommitteeSessionEn
       throw new ForbiddenException('Only rapporteur can edit session report');
     }
 
-    if (dto.reportTopic !== undefined) session.reportTopic = dto.reportTopic ?? null;
-    if (dto.reportContext !== undefined) session.reportContext = dto.reportContext ?? null;
-    if (dto.reportDiscussion !== undefined) session.reportDiscussion = dto.reportDiscussion ?? null;
-    if (dto.reportRowsJson !== undefined) session.reportRowsJson = dto.reportRowsJson ?? null;
-
-    return this.repository.save(session);
+    // Note: Update logic for report has been moved to Report module.
+    // Ensure we don't throw an error for now, return session
+    return session;
   }
 }

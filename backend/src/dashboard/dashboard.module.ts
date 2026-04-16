@@ -7,6 +7,9 @@ import { EmployeEntity } from '../database/entities/employe.entity';
 import { CommitteeSessionEntity } from '../database/entities/committee-session.entity';
 import { DecisionEntity } from '../database/entities/decision.entity';
 import { MemberComiteEntity } from '../database/entities/member-comite.entity';
+import { SubjectDecisionEntity } from '../database/entities/subject-decision.entity';
+import { CommitteeEntity } from '../database/entities/comite.entity';
+import { SessionReportEntity } from '../database/entities/session-report.entity';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { MemberComiteEntity } from '../database/entities/member-comite.entity';
       CommitteeSessionEntity,
       DecisionEntity,
       MemberComiteEntity,
+      SubjectDecisionEntity,
+      CommitteeEntity,
+      SessionReportEntity,
     ]),
   ],
   controllers: [DashboardController],

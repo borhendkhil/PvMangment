@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS `comite_session` (
   `date_session` datetime DEFAULT NULL,
   `lieu` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `statut` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cabinet_warning` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_session_comite` (`comite_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
